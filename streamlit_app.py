@@ -17,3 +17,4 @@ def check_login_state():
 
 
 initialization()
+check_login_state()
