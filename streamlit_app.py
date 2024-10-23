@@ -20,7 +20,7 @@ if submit and username == actual_username and password == actual_password:
     # clear the form/container and display a success message
     placeholder.empty()
     st.success("Login successful")
-elif submit and username != actual_username and password != actual_password:
+elif submit and (username != actual_username or password != actual_password):
     st.error("Login failed")
 else:
     pass
