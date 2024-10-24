@@ -27,6 +27,6 @@ def login_page():
         state_placeholder.empty()
 
     elif submit and (username != actual_username or password != actual_password):
-        state_placeholder.error("Login failed")
+        state_placeholder.error("Login failed, Username/Password is incorrect")
     else:
         pass

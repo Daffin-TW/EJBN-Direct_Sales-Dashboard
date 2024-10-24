@@ -1,5 +1,4 @@
 from modules import login_page
-from time import sleep
 import streamlit as st
 
 
