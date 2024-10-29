@@ -1,4 +1,4 @@
-from modules import login_page
+from modules import login_page, get_dataset
 import streamlit as st
 
 
@@ -17,3 +17,7 @@ def check_login_state():
 
 initialization()
 check_login_state()
+
+if st.session_state.login_state:
+    df = get_dataset()
+    st.write(df)

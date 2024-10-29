@@ -8,8 +8,8 @@ def login_page():
     state_placeholder = st.empty()
 
     # Declare username and password
-    actual_username = st.secrets.user_credentials['USERNAME']
-    actual_password = st.secrets.user_credentials['PASSWORD']
+    actual_username = st.secrets.user_credentials.username
+    actual_password = st.secrets.user_credentials.password
 
     # Insert a form in the container
     with placeholder.form("login"):
@@ -23,7 +23,7 @@ def login_page():
         placeholder.empty()
         state_placeholder.success("Login successful")
         sleep(1)
-        st.session_state.login_state = 0
+        st.session_state.login_state = 1
         state_placeholder.empty()
 
     elif submit and (username != actual_username or password != actual_password):
