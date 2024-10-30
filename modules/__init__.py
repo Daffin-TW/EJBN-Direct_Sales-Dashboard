@@ -1,2 +1,2 @@
 from .login import login_page
-from .rce_dataset import get_dataset
+from .rce_dataset import get_dataset, load_dataset

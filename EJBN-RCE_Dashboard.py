@@ -1,4 +1,4 @@
-from modules import login_page, get_dataset
+from modules import login_page, load_dataset
 import streamlit as st
 
 
@@ -19,5 +19,9 @@ initialization()
 check_login_state()
 
 if st.session_state.login_state:
-    df = get_dataset()
-    st.write(df)
+    df = load_dataset()
+    rcm = df['RCM'].unique()
+
+    st.sidebar.multiselect('RCM', rcm, rcm[0],
+                           placeholder='Pilih RCM yang ingin ditampilkan')
+    
