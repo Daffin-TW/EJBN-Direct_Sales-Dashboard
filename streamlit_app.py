@@ -10,6 +10,11 @@ def check_login_state():
         return True
 
 
+st.set_page_config(
+    page_title='EJBN RCE Dashboard',
+    page_icon='images/logo.png'
+)
+
 if check_login_state():
     df = load_dataset()
     rcm = df['RCM'].unique()
