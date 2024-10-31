@@ -23,7 +23,7 @@ def login_page():
         placeholder.empty()
         state_placeholder.success("Login successful")
         sleep(1)
-        st.session_state.login_state = 1
+        st.session_state.login_state = True
         state_placeholder.empty()
 
     elif submit and (username != actual_username or password != actual_password):

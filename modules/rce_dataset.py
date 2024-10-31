@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-@st.cache_data
+@st.cache_data(show_spinner=False)
 def get_dataset(csv_url: str = None) -> pd.DataFrame:
     if csv_url is not None:
         url = 'https://drive.google.com/uc?id=' + csv_url.split('/')[-2]
@@ -12,7 +12,7 @@ def get_dataset(csv_url: str = None) -> pd.DataFrame:
     return pd.read_csv(url)
 
 def load_dataset(csv_url: str = None) -> pd.DataFrame:
-    with st.spinner('Importing the data...'):
+    with st.spinner('Mengimpor data, mohon ditunggu...'):
         df = get_dataset(csv_url)
 
     return df
