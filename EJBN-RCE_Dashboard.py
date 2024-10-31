@@ -2,23 +2,15 @@ from modules import login_page, load_dataset
 import streamlit as st
 
 
-def initialization():
-    if 'login_state' not in st.session_state:
-        st.session_state.login_state = False
-    else:
-        pass
-
 def check_login_state():
     if not st.session_state.get('login_state', False):
         login_page()
+        return False
     else:
-        pass
+        return True
 
 
-initialization()
-check_login_state()
-
-if st.session_state.get('login_state', False):
+if check_login_state():
     df = load_dataset()
     rcm = df['RCM'].unique()
 

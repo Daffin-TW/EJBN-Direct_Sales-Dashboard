@@ -3,6 +3,8 @@ import streamlit as st
 
 
 def login_page():
+    st.session_state.login_state = False
+
     # Create an empty container
     placeholder = st.empty()
     state_placeholder = st.empty()
@@ -20,11 +22,12 @@ def login_page():
 
     if submit and username == actual_username and password == actual_password:
         # clear the form/container and display a success message
+        st.session_state.login_state = True
         placeholder.empty()
         state_placeholder.success("Login successful")
         sleep(1)
-        st.session_state.login_state = True
         state_placeholder.empty()
+        st.rerun()
 
     elif submit and (username != actual_username or password != actual_password):
         state_placeholder.error("Login failed, Username/Password is incorrect")
