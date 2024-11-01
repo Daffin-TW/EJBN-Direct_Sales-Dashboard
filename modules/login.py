@@ -1,19 +1,17 @@
-from time import sleep
+from streamlit.delta_generator import DeltaGenerator
 import streamlit as st
 
 
-def login_page():
+def login_page(st_columns: DeltaGenerator):
     st.session_state.login_state = False
 
-    # Create an empty container
-    placeholder = st.empty()
-    state_placeholder = st.empty()
+    actual_username: str = st.secrets.user_credentials.username
+    actual_password: str = st.secrets.user_credentials.password
 
-    # Declare username and password
-    actual_username = st.secrets.user_credentials.username
-    actual_password = st.secrets.user_credentials.password
+    container = st_columns.container(border=False)
+    placeholder = container.empty()
+    state_placeholder = container.empty()
 
-    # Insert a form in the container
     with placeholder.form("login"):
         st.markdown("#### Enter your credentials")
         username = st.text_input("Username")
@@ -25,8 +23,6 @@ def login_page():
         st.session_state.login_state = True
         placeholder.empty()
         state_placeholder.success("Login successful")
-        sleep(1)
-        state_placeholder.empty()
         st.rerun()
 
     elif submit and (username != actual_username or password != actual_password):

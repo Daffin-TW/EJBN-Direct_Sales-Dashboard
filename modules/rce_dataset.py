@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 
+
 @st.cache_data(show_spinner=False)
 def get_dataset(csv_url: str = None) -> pd.DataFrame:
     if csv_url is not None:
