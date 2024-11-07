@@ -12,7 +12,7 @@ def initialization():
     )
     check_login_state()
 
-    ss.navigation = 'dashboard'
+    ss.navigation = '📊 dashboard'
     init_content()
     init_sidebar()
 

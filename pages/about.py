@@ -12,7 +12,7 @@ def initialization():
     )
     check_login_state()
 
-    ss.navigation = 'about'
+    ss.navigation = '🖊 about'
     init_content()
     init_sidebar()
 
