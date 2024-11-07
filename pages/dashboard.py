@@ -1,8 +1,9 @@
+from modules import init_sidebar, init_content
 from streamlit import session_state as ss
-from modules import init_sidebar
 import streamlit as st
 
 
+# Check wether the user has a permission to access the dashboard
 def check_login_state():
     if not ss.get('login_state', False):
         ss.login_message = True
@@ -18,10 +19,10 @@ def initialization():
         layout='wide'
     )
     check_login_state()
+    init_content()
+    init_sidebar()
 
 
 initialization()
 
 st.write('WORK IN PROGRESS')
-
-init_sidebar()

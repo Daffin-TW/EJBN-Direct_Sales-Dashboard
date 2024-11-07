@@ -1,1 +1,1 @@
-from .sidebar import init_sidebar
+from .page_init import init_sidebar, init_content

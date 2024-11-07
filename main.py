@@ -5,6 +5,11 @@ import streamlit as st
 
 # Callback function when button is pressed
 def submit_callback():
+    if not ss.get('username', False):
+        ss.username = ''
+    if not ss.get('password', False):
+        ss.password = ''
+
     actual_username: str = sc.user_credentials.username
     actual_password: str = sc.user_credentials.password
     
@@ -12,7 +17,7 @@ def submit_callback():
         ss.login_message = True
         ss.login_state = True
         
-    elif (ss.username != actual_username or ss.password != actual_password):
+    elif ss.username != actual_username or ss.password != actual_password:
         ss.password = ''
 
 # Makes a login form
