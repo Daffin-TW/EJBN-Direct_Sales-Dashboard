@@ -1,4 +1,5 @@
 from streamlit import session_state as ss
+from modules import init_sidebar
 import streamlit as st
 
 
@@ -22,5 +23,5 @@ def initialization():
 initialization()
 
 st.write('WORK IN PROGRESS')
-with st.sidebar:
-    st.write("Let's go")
+
+init_sidebar()
