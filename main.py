@@ -3,6 +3,7 @@ from streamlit import secrets as sc
 import streamlit as st
 
 
+# Callback function when button is pressed
 def submit_callback():
     actual_username: str = sc.user_credentials.username
     actual_password: str = sc.user_credentials.password
@@ -14,6 +15,7 @@ def submit_callback():
     elif (ss.username != actual_username or ss.password != actual_password):
         ss.password = ''
 
+# Makes a login form
 def authentication():
     placeholder = st.empty()
     with placeholder.form('login'):
@@ -29,7 +31,7 @@ def authentication():
     elif submit:
         st.toast("Login gagal, Username/Password tidak sesuai", icon='⚠')
 
-
+# Check wether the user has a permission to access the dashboard
 def check_login_state():
     if not ss.get('login_state', False):
         ss.login_state = False
