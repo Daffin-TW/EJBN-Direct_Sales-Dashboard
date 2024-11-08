@@ -3,33 +3,33 @@ import streamlit as st
 
 
 def init_content():
+
+    # Add a logo in sidebar
     st.logo('images/horizontal_long_logo.png', icon_image='images/logo.png',
             size='large')
 
+    # Add a title and a button on page to navigate
     placeholder = st.container()
     col1, col2 = placeholder.columns((2, 4))
-
     col1.markdown(f'### {ss.navigation.title()}')
-    col2_1, col2_2, col2_3 = col2.columns(3)
-    
-    if col2_1.button(
-        '📊 Dashboard', 'dashboard_button',
-        use_container_width=True) and ss.navigation != '📊 dashboard':
-        st.switch_page('pages/dashboard.py')
 
-    elif col2_2.button(
-        '💾 Database', 'database_button',
-        use_container_width=True) and ss.navigation != '💾 database':
-        st.switch_page('pages/database.py')
-
-    elif col2_3.button(
-        '🖊 About', 'about_button',
-        use_container_width=True) and ss.navigation != '🖊 about':
-        st.switch_page('pages/about.py')
+    button_columns = col2.columns(3)
+    pages = {'dashboard': '📊 Dashboard',
+             'database': '💾 Database',
+             'about': '🖊 About'}
     
+    # Create the button and the switch pages function
+    for column, page in zip(button_columns, pages.keys()):
+        if column.button(
+            pages[page], f'{page}_button',
+            use_container_width=True) and ss.navigation != pages[page].lower():
+            st.switch_page(f'pages/{page}.py')
+
     st.divider()
 
 def init_sidebar():
+
+    # Add a selectbox on sidebar to navigate
     with st.sidebar:
         st.divider()
         st.markdown('## Navigasi')
@@ -40,5 +40,6 @@ def init_sidebar():
             'navigation_input', options, index=index,
             label_visibility='collapsed', placeholder='Pilih Halaman')
         
+        # Switch pages if the navigation is not referring to current page
         if nav_input.lower() != ss.navigation:
             st.switch_page(f'pages/{nav_input.split()[-1].lower()}.py')
