@@ -59,4 +59,4 @@ def initialization():
 initialization()
 
 if check_login_state():
-        st.switch_page('pages/dashboard.py')
+    st.switch_page('pages/dashboard.py')

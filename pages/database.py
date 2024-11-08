@@ -28,11 +28,12 @@ def tanggal_input():
     if apply:
         st.rerun()
 
-
 initialization()
 
-_, edit_column = st.columns((3.6, 1))
-edit_column.button('⚙ Edit Database', 'edit', use_container_width=True)
+st.button('⚙ Edit Database', 'edit_button', use_container_width=True)
+
+if ss.edit_button:
+    st.switch_page('pages/database_edit.py')
 
 tab_agent, tab_target, tab_activation = st.tabs(
     ('Agent', 'Target', 'Daily Activation'))
@@ -68,8 +69,6 @@ with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
 with tab_agent:
     container = st.container()
 
-
-    
     col1, col2 = container.columns((1, 2))
     
     with col1.container(border=True, height=300):
