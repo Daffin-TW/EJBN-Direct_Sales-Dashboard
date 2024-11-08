@@ -1,6 +1,16 @@
 from streamlit import session_state as ss
+from modules import check_login_state
 import streamlit as st
 
+
+def init_configuration():
+    st.set_page_config(
+        page_title='EJBN RCE Dashboard',
+        page_icon='images/logo.png',
+        initial_sidebar_state='collapsed',
+        layout='wide'
+    )
+    check_login_state()
 
 def init_content():
 

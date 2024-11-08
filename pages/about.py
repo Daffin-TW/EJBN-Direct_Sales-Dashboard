@@ -1,16 +1,12 @@
-from modules import check_login_state, init_sidebar, init_content
+from modules import (
+    check_login_state, init_configuration, init_sidebar,
+    init_content, connect_db, check_connection, fetch_channel)
 from streamlit import session_state as ss
 import streamlit as st
 
 
 def initialization():
-    st.set_page_config(
-        page_title='EJBN RCE Dashboard',
-        page_icon='images/logo.png',
-        initial_sidebar_state='collapsed',
-        layout='wide'
-    )
-    check_login_state()
+    init_configuration()
 
     ss.navigation = '🖊 about'
     init_content()
