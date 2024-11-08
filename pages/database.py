@@ -36,6 +36,9 @@ def tanggal_input():
 
 initialization()
 
+_, edit_column = st.columns((3.6, 1))
+edit_column.button('⚙ Edit Database', 'edit', use_container_width=True)
+
 tab_agent, tab_target, tab_activation = st.tabs(
     ('Agent', 'Target', 'Daily Activation'))
 
@@ -69,6 +72,9 @@ with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
 
 with tab_agent:
     container = st.container()
+
+
+    
     col1, col2 = container.columns((1, 2))
     
     with col1.container(border=True, height=300):
@@ -78,15 +84,9 @@ with tab_agent:
             
     with col2.container(border=True, height=300):
         st.markdown('#### RCE')
-        # data = fetch_rce(_db_cursor, filter_input)
-        # st.dataframe(data, hide_index=True,
-        #              use_container_width=True)
+
         
     with container.container(border=True):
         st.markdown('#### Agent')
-        # data = fetch_agent(_db_cursor, filter_input)
-        # st.dataframe(data, hide_index=True, height=700,
-        #              column_order=list(data.columns[1:]),
-        #              use_container_width=True)
-
+        
 check_connection()

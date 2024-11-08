@@ -12,15 +12,19 @@ def init_content():
     col1.markdown(f'### {ss.navigation.title()}')
     col2_1, col2_2, col2_3 = col2.columns(3)
     
-    if col2_1.button('📊 Dashboard', 'dashboard_button',
-                     use_container_width=True):
+    if col2_1.button(
+        '📊 Dashboard', 'dashboard_button',
+        use_container_width=True) and ss.navigation != '📊 dashboard':
         st.switch_page('pages/dashboard.py')
 
-    elif col2_2.button('💾 Database', 'database_button',
-                       use_container_width=True):
+    elif col2_2.button(
+        '💾 Database', 'database_button',
+        use_container_width=True) and ss.navigation != '💾 database':
         st.switch_page('pages/database.py')
 
-    elif col2_3.button('🖊 About', 'about_button', use_container_width=True):
+    elif col2_3.button(
+        '🖊 About', 'about_button',
+        use_container_width=True) and ss.navigation != '🖊 about':
         st.switch_page('pages/about.py')
     
     st.divider()
