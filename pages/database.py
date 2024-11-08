@@ -23,7 +23,22 @@ def initialization():
     check_connection()
 
 
+@st.dialog('Filter Tanggal', width='large')
+def tanggal_input():
+    st.logo('images/horizontal_long_logo.png', icon_image='images/logo.png',
+            size='large')
+    st.date_input('filter.date', label_visibility='collapsed')
+
+    apply = st.button('Apply', key='tanggal_apply_button')
+
+    if apply:
+        st.rerun()
+
+
 initialization()
+
+tab_agent, tab_target, tab_activation = st.tabs(
+    ('Agent', 'Target', 'Daily Activation'))
 
 with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
     st.markdown('### Nama')
@@ -41,12 +56,18 @@ with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
     #     label_visibility='collapsed')
     
     st.markdown('### Tanggal')
-    st.date_input('filter.date', label_visibility='collapsed')
+    tanggal_button = st.button('Edit Filter', 'tanggal_button',
+                               use_container_width=True)
+    if tanggal_button:
+        tanggal_input()
     
     st.markdown('### Status')
     status_opt = ('All', 'Active', 'Inactive')
     st.segmented_control(
         'filter.status', options=status_opt,
         default=status_opt[1], label_visibility='collapsed')
+
+with tab_agent:
+    st.write('Halo Deck')
 
 check_connection()

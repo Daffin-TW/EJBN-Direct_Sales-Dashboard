@@ -3,7 +3,8 @@ import streamlit as st
 
 
 def init_content():
-    st.logo('images/logo.png')
+    st.logo('images/horizontal_long_logo.png', icon_image='images/logo.png',
+            size='large')
 
     placeholder = st.container()
     col1, col2 = placeholder.columns((2, 4))
@@ -18,7 +19,7 @@ def init_content():
     elif col2_2.button('💾 Database', 'database_button',
                        use_container_width=True):
         st.switch_page('pages/database.py')
-        
+
     elif col2_3.button('🖊 About', 'about_button', use_container_width=True):
         st.switch_page('pages/about.py')
     
@@ -26,9 +27,6 @@ def init_content():
 
 def init_sidebar():
     with st.sidebar:
-        st.html('''
-            <h1 style="text-align: center">EJBN Direct Sales Sashboard</h1>
-        ''')
         st.divider()
         st.markdown('## Navigasi')
 

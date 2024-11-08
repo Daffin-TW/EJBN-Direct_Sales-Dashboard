@@ -24,10 +24,10 @@ def submit_callback():
 def authentication():
     placeholder = st.empty()
     with placeholder.form('login'):
-        st.markdown("#### Enter your credentials")
-        st.text_input("Username", key='username')
-        st.text_input("Password", key='password', type="password")
-        submit = st.form_submit_button("Login", on_click=submit_callback)
+        st.markdown('#### Enter your credentials')
+        st.text_input('Username', key='username')
+        st.text_input('Password', key='password', type='password')
+        submit = st.form_submit_button('Login', on_click=submit_callback)
 
     if submit and ss.login_state:
         placeholder.empty()
