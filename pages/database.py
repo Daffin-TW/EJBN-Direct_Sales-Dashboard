@@ -1,5 +1,5 @@
 from modules import (check_login_state, init_sidebar, init_content, connect_db,
-    check_connection)
+    check_connection, fetch_channel)
 from datetime import datetime
 from streamlit import session_state as ss
 import streamlit as st
@@ -21,7 +21,6 @@ def initialization():
     if not ss.get('db_connection', False):
         ss.db_connection = connect_db()
     check_connection()
-
 
 @st.dialog('Filter Tanggal', width='large')
 def tanggal_input():
@@ -48,12 +47,13 @@ with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
         label_visibility='collapsed'
     )
     
+    rce_options = ('Chentia Aisya Oktarina', 'Diaz Yusuf Zakaria', 'Ni Made Ayu Astariani Dewi')
     # rce_options = fetch_rce_names(_db_cursor).index
-    # st.markdown('### RCE')
-    # filter_input['RCE'] = st.multiselect(
-    #     'Nama RCE', options=rce_options, default=None,
-    #     placeholder='Filter berdasarkan RCE',
-    #     label_visibility='collapsed')
+    st.markdown('### RCE')
+    st.multiselect(
+        'filter.rce', options=rce_options, default=None,
+        placeholder='Filter berdasarkan RCE',
+        label_visibility='collapsed')
     
     st.markdown('### Tanggal')
     tanggal_button = st.button('Edit Filter', 'tanggal_button',
@@ -68,6 +68,25 @@ with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
         default=status_opt[1], label_visibility='collapsed')
 
 with tab_agent:
-    st.write('Halo Deck')
+    container = st.container()
+    col1, col2 = container.columns((1, 2))
+    
+    with col1.container(border=True, height=300):
+        st.markdown('#### Channel')
+        st.dataframe(fetch_channel(),
+                     use_container_width=True)
+            
+    with col2.container(border=True, height=300):
+        st.markdown('#### RCE')
+        # data = fetch_rce(_db_cursor, filter_input)
+        # st.dataframe(data, hide_index=True,
+        #              use_container_width=True)
+        
+    with container.container(border=True):
+        st.markdown('#### Agent')
+        # data = fetch_agent(_db_cursor, filter_input)
+        # st.dataframe(data, hide_index=True, height=700,
+        #              column_order=list(data.columns[1:]),
+        #              use_container_width=True)
 
 check_connection()
