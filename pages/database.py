@@ -28,11 +28,11 @@ def tanggal_input():
     col_start, col_end = st.columns(2)
     with col_start:
         st.markdown('### Date Start')
-        st.date_input('filter.date_start', value=(date_start),
+        st.date_input('filter_date_start', value=(date_start),
                       label_visibility='collapsed', format='DD/MM/YYYY')
     with col_end:
         st.markdown('### Date End')
-        col_end.date_input('filter.date_start', value=(date_end),
+        col_end.date_input('filter_date_start', value=(date_end),
                            label_visibility='collapsed', format='DD/MM/YYYY')
 
     apply = st.button('Apply', key='tanggal_apply_button')
@@ -55,7 +55,7 @@ tab_agent, tab_target, tab_activation = st.tabs(
 with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
     st.markdown('### Nama')
     st.text_input(
-        'filter.name',
+        'filter_name',
         placeholder='Filter berdasarkan nama',
         label_visibility='collapsed'
     )
@@ -64,7 +64,7 @@ with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
     # rce_options = fetch_rce_names(_db_cursor).index
     st.markdown('### RCE')
     st.multiselect(
-        'filter.rce', options=rce_options, default=None,
+        'filter_rce', options=rce_options, default=None,
         placeholder='Filter berdasarkan RCE',
         label_visibility='collapsed')
     
@@ -77,7 +77,7 @@ with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
     st.markdown('### Status')
     status_opt = ('All', 'Active', 'Inactive')
     st.segmented_control(
-        'filter.status', options=status_opt,
+        'filter_status', options=status_opt,
         default=status_opt[1], label_visibility='collapsed')
 
 # Show agent database

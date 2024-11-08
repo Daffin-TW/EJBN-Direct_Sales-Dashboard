@@ -33,6 +33,7 @@ def init_content():
         if column.button(
             pages[page], f'{page}_button',
             use_container_width=True) and ss.navigation != pages[page].lower():
+            ss.is_firsttime = True
             st.switch_page(f'pages/{page}.py')
 
     st.divider()
@@ -52,4 +53,5 @@ def init_sidebar():
         
         # Switch pages if the navigation is not referring to current page
         if nav_input.lower() != ss.navigation:
+            ss.is_firsttime = True
             st.switch_page(f'pages/{nav_input.split()[-1].lower()}.py')
