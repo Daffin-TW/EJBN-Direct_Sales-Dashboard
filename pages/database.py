@@ -1,7 +1,7 @@
 from modules import (
     init_configuration, init_sidebar, init_content,
     connect_db, check_connection, fetch_channel)
-from datetime import datetime
+from datetime import datetime, timedelta
 from streamlit import session_state as ss
 import streamlit as st
 
@@ -17,27 +17,41 @@ def initialization():
         ss.db_connection = connect_db()
     check_connection()
 
+# Show specific date filter
 @st.dialog('Filter Tanggal', width='large')
 def tanggal_input():
     st.logo('images/horizontal_long_logo.png', icon_image='images/logo.png',
             size='large')
-    st.date_input('filter.date', label_visibility='collapsed')
+    date_end = datetime.now()
+    date_start = date_end - timedelta(days=30)
+
+    col_start, col_end = st.columns(2)
+    with col_start:
+        st.markdown('### Date Start')
+        st.date_input('filter.date_start', value=(date_start),
+                      label_visibility='collapsed', format='DD/MM/YYYY')
+    with col_end:
+        st.markdown('### Date End')
+        col_end.date_input('filter.date_start', value=(date_end),
+                           label_visibility='collapsed', format='DD/MM/YYYY')
 
     apply = st.button('Apply', key='tanggal_apply_button')
-
     if apply:
         st.rerun()
 
+
 initialization()
 
+# Add a button to edit the database
 st.button('⚙ Edit Database', 'edit_button', use_container_width=True)
-
 if ss.edit_button:
     st.switch_page('pages/database_edit.py')
 
+# Select database category
 tab_agent, tab_target, tab_activation = st.tabs(
     ('Agent', 'Target', 'Daily Activation'))
 
+# Add a filter function on the sidebar
 with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
     st.markdown('### Nama')
     st.text_input(
@@ -66,6 +80,7 @@ with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
         'filter.status', options=status_opt,
         default=status_opt[1], label_visibility='collapsed')
 
+# Show agent database
 with tab_agent:
     container = st.container()
 
