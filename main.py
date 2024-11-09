@@ -41,6 +41,7 @@ def check_login_state():
     if not ss.get('login_state', False):
         ss.login_state = False
         authentication()
+        
         if ss.get('login_message', False):
             st.toast('Dimohon untuk login agar dapat mengakses situs...',
                      icon='❗')

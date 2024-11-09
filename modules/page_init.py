@@ -20,8 +20,8 @@ def init_content():
 
     # Add a title and a button on page to navigate
     placeholder = st.container()
-    col1, col2 = placeholder.columns((2, 4))
-    col1.markdown(f'### {ss.navigation.title()}')
+    col1, col2 = placeholder.columns((2, 4), vertical_alignment='bottom')
+    col1.markdown(f'# {ss.navigation.title()}')
 
     button_columns = col2.columns(3)
     pages = {'dashboard': '📊 Dashboard',
