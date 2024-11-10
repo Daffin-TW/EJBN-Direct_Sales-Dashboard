@@ -1,6 +1,6 @@
 from modules import (
-    init_configuration, init_content,
-    connect_db, check_connection, update_channel, execute_sql_query)
+    init_configuration, init_content, connect_db, check_connection,
+    update_channel, execute_sql_query)
 from streamlit import session_state as ss
 from datetime import datetime
 import streamlit as st
@@ -42,6 +42,10 @@ def apply_button(sql):
         st.toast('Perubahan Berhasil disimpan')
     else:
         ss.error_editing = True
+        st.toast("""
+            Mengalami kendala? Hubungi [Daffin_TW](https://wa.me/6282332232896)
+            untuk bertanya atau perbaikan.
+        """, icon='🚨')
         st.error(result[1])
         
 
