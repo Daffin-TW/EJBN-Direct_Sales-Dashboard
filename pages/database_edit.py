@@ -1,6 +1,6 @@
 from modules import (
     init_configuration, init_content,
-    connect_db, check_connection, fetch_channel)
+    connect_db, check_connection, update_channel, execute_sql_query)
 from streamlit import session_state as ss
 from datetime import datetime
 import streamlit as st
@@ -34,9 +34,15 @@ def current_table():
         key for key, value in button_edit_database.items() if value == True
     ])
 
-def table_input(data):
-    pass
+def apply_button(sql):
+    result = execute_sql_query(sql)
+    ss.done_editing = True
 
+    if result[0]:
+        st.toast('Perubahan Berhasil disimpan')
+    else:
+        st.error(result[1])
+    
 
 initialization()
 
@@ -60,31 +66,10 @@ with col2:
     st.markdown(f'### Tabel {ss.edit_selection}')
 
     if ss.edit_selection == 'Channel':
-        # changes = table_input(fetch_channel())
-        df_original = fetch_channel().reset_index()
+        sql = update_channel()
         
-        df_modified = st.data_editor(
-            df_original.copy(), num_rows='dynamic', use_container_width=True,
-            column_config={
-                'Code': st.column_config.TextColumn(
-                    default='DS00', max_chars=5,
-                    required=True, validate='[A-Za-z]+[0-9]+'
-                )
-            }
-        )
-
-        if any(df_modified['Code'].duplicated()):
-            st.error('Kode tidak boleh duplikat', icon='❗')
-        df_modified['Code'] = df_modified['Code'].drop_duplicates()
-        
-        changes = df_modified.merge(
-            df_original, indicator = True, how='outer',
-        ).loc[lambda x : x['_merge'] != 'both']
-
-        changes = changes.dropna(subset=['Code'])
-        changes.rename(columns={'_merge': 'Difference'}, inplace=True)
-        changes.drop_duplicates(subset=['Code', 'Difference'], inplace=True)
-        changes['Update'] = changes.duplicated(subset=['Code'], keep=False)
-
-        
-        st.write(changes)
+        if sql and not ss.get('invalid_edit', False) and not ss.get('done_editing', False):
+            st.button(
+                'Simpan Perubahan', key='apply_button',
+                on_click=lambda: apply_button(sql)
+            )
