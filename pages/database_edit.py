@@ -1,6 +1,6 @@
 from modules import (
     init_configuration, init_content, connect_db, check_connection,
-    update_channel, execute_sql_query)
+    edit_channel, edit_rce, execute_sql_query)
 from streamlit import session_state as ss
 from datetime import datetime
 import streamlit as st
@@ -34,7 +34,7 @@ def current_table():
         key for key, value in button_edit_database.items() if value == True
     ])
 
-def apply_button(sql):
+def apply_button_click(sql):
     result = execute_sql_query(sql)
     ss.done_editing = True
 
@@ -47,7 +47,19 @@ def apply_button(sql):
             untuk bertanya atau perbaikan.
         """, icon='🚨')
         st.error(result[1])
-        
+
+def is_encounter_an_error():
+    if ss.get('error_editing', False):
+        ss.error_editing = False
+        st.stop()
+
+def apply_button(sql: str):
+    if (sql and not ss.get('invalid_edit', False) and
+            not ss.get('done_editing', False)):
+        st.button(
+            'Simpan Perubahan', key='apply_button',
+            on_click=lambda: apply_button_click(sql)
+        )
 
 
 initialization()
@@ -72,14 +84,15 @@ with col2:
     st.markdown(f'### Tabel {ss.edit_selection}')
 
     if ss.edit_selection == 'Channel':
-        if ss.get('error_editing', False):
-            ss.error_editing = False
-            st.stop()
+        is_encounter_an_error()
+        sql = edit_channel()
 
-        sql = update_channel()
+        if sql:
+            apply_button(sql)
+
+    if ss.edit_selection == 'RCE':
+        is_encounter_an_error()
+        sql = edit_rce()
         
-        if sql and not ss.get('invalid_edit', False) and not ss.get('done_editing', False):
-            st.button(
-                'Simpan Perubahan', key='apply_button',
-                on_click=lambda: apply_button(sql)
-            )
+        if sql:
+            apply_button(sql)

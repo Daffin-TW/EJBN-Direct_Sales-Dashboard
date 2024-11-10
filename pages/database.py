@@ -1,6 +1,6 @@
 from modules import (
     init_configuration, init_sidebar, init_content,
-    connect_db, check_connection, fetch_channel)
+    connect_db, check_connection, fetch_data)
 from datetime import datetime, timedelta
 from streamlit import session_state as ss
 import streamlit as st
@@ -88,8 +88,7 @@ with tab_agent:
     
     with col1.container(border=True, height=300):
         st.markdown('#### Channel')
-        st.dataframe(fetch_channel(),
-                     use_container_width=True)
+        st.dataframe(fetch_data('Channel'), use_container_width=True)
             
     with col2.container(border=True, height=300):
         st.markdown('#### RCE')
