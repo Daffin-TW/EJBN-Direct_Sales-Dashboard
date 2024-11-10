@@ -80,7 +80,7 @@ def update_channel():
         (changes['Difference'] == 'right_only') &
         (changes['Update'] == False).values
     ]['Code'].values
-    delete = ', '.join([str(i) for i in delete])
+    delete = ', '.join([f"'{i}'" for i in delete])
 
     sql = ''
     if insert_update:
@@ -98,8 +98,6 @@ def update_channel():
 
 def execute_sql_query(sql: str):
     check_connection()
-
-    st.write(sql)
 
     try:
         cursor: db_cur = ss.db_connection.cursor()
