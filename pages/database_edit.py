@@ -41,8 +41,10 @@ def apply_button(sql):
     if result[0]:
         st.toast('Perubahan Berhasil disimpan')
     else:
+        ss.error_editing = True
         st.error(result[1])
-    
+        
+
 
 initialization()
 
@@ -66,6 +68,10 @@ with col2:
     st.markdown(f'### Tabel {ss.edit_selection}')
 
     if ss.edit_selection == 'Channel':
+        if ss.get('error_editing', False):
+            ss.error_editing = False
+            st.stop()
+
         sql = update_channel()
         
         if sql and not ss.get('invalid_edit', False) and not ss.get('done_editing', False):

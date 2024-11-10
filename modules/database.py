@@ -30,6 +30,8 @@ def sql_to_dataframe(sql: str):
     cursor.execute(sql)
     df = pd.DataFrame(cursor.fetchall())
     df.columns = [i[0] for i in cursor.description]
+    cursor.close()
+
     return df.set_index(cursor.description[0][0])
 
 def fetch_channel():
@@ -103,8 +105,13 @@ def execute_sql_query(sql: str):
         cursor: db_cur = ss.db_connection.cursor()
         cursor.execute(sql)
         ss.db_connection.commit()
+        cursor.close()
         st.cache_data.clear()
+
         return (True, 'Success')
+    
     except Exception as e:
         st.cache_data.clear()
+        cursor.close()
+        
         return (False, e)
