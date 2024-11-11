@@ -1,6 +1,6 @@
 from modules import (
     init_configuration, init_content, connect_db, check_connection,
-    edit_channel, edit_rce, execute_sql_query)
+    edit_channel, edit_rce, edit_agent, execute_sql_query)
 from streamlit import session_state as ss
 from datetime import datetime
 import streamlit as st
@@ -83,16 +83,29 @@ with col1:
 with col2:
     st.markdown(f'### Tabel {ss.edit_selection}')
 
-    if ss.edit_selection == 'Channel':
-        is_encounter_an_error()
-        sql = edit_channel()
+    match ss.edit_selection:
+        case 'Channel':
+            is_encounter_an_error()
+            sql = edit_channel()
 
-        if sql:
-            apply_button(sql)
+            if sql:
+                apply_button(sql)
 
-    if ss.edit_selection == 'RCE':
-        is_encounter_an_error()
-        sql = edit_rce()
+        case 'RCE':
+            sql = edit_rce()
+            is_encounter_an_error()
+            
+            if sql:
+                st.write(sql)
+                apply_button(sql)
+
+        case 'Agent':
+            is_encounter_an_error()
+            sql = edit_agent()
+            
+            if sql:
+                st.write(sql)
+                apply_button(sql)
         
-        if sql:
-            apply_button(sql)
+        case _:
+            pass

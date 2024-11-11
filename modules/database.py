@@ -52,6 +52,28 @@ def fetch_data(table: str):
                     ON R.rce_nik = P.nik;"""
             return sql_to_dataframe(sql)
         
+        case 'Agent Editing':
+            sql = """
+                SELECT A.id AS "ID", CONCAT(R.id, ": ", PR.name) AS "RCE",
+                    PA.nik AS "NIK", PA.`name` AS "Name", A.employment_date
+                    AS "Employment Date", A.end_date AS "End Date" 
+                    FROM Person AS PR INNER JOIN Rce AS R
+                    ON PR.nik = R.rce_nik INNER JOIN Agent AS A
+                    ON R.id = A.rce_id INNER JOIN Person AS PA
+                    ON A.agent_nik = PA.nik;"""
+            return sql_to_dataframe(sql)
+        
+        case 'Agent':
+            sql = """
+                SELECT A.id AS "ID", R.id AS "RCE ID", PA.nik AS "NIK",
+                    PA.`name` AS "Name", PR.`name` AS "RCE", A.employment_date
+                    AS "Employment Date", A.end_date AS "End Date" 
+                    FROM Person AS PR INNER JOIN Rce AS R
+                    ON PR.nik = R.rce_nik INNER JOIN Agent AS A
+                    ON R.id = A.rce_id INNER JOIN Person AS PA
+                    ON A.agent_nik = PA.nik;"""
+            return sql_to_dataframe(sql)
+        
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')
         
@@ -60,10 +82,17 @@ def fetch_data_primary(table: str):
         case 'Channel':
             sql = 'SELECT `code` AS `Code` FROM Channel;'
             return sql_to_dataframe(sql).index
+        
         case 'Rce':
             sql = """SELECT DISTINCT `name` AS "Name" FROM Rce AS R
                         INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
             return sql_to_dataframe(sql)
+        
+        case 'Rce Id Name':
+            sql = """SELECT CONCAT(R.id, ": ", P.name) AS "RCE" FROM Rce AS R
+                        INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
+            return sql_to_dataframe(sql).index
+        
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')
 
@@ -112,6 +141,7 @@ def edit_channel():
     delete = ', '.join([f"'{i}'" for i in delete])
 
     sql = []
+
     if insert_update:
         sql.append(f"""
             INSERT INTO `Channel` VALUES {insert_update} AS new
@@ -170,8 +200,10 @@ def edit_rce():
         'ID': 'NULL', 'Employment Date': 'NULL', 'End Date': 'NULL'
     }, inplace=True)
     changes.rename(columns={'_merge': 'Difference'}, inplace=True)
-    changes.drop_duplicates(subset=['ID', 'NIK', 'Difference'], inplace=True)
-    changes['Update'] = changes.duplicated(subset=['ID', 'NIK'], keep=False)
+    changes['Update'] = (
+        (changes.duplicated(subset=['ID', 'NIK'], keep=False)) &
+        (changes['Difference'] == 'right_only')
+    )
     changes['Employment Date'] = changes['Employment Date'].astype(str)
     changes['End Date'] = changes['End Date'].astype(str)
 
@@ -201,12 +233,14 @@ def edit_rce():
     delete_rce = ', '.join([f"'{i}'" for i in delete_rce])
 
     sql = []
+
     if insert_update_person:
         sql.append(f"""
             INSERT INTO Person VALUES {insert_update_person} AS new
                 ON DUPLICATE KEY UPDATE
                 `name` = new.`name`;
         """)
+        
     if insert_update_rce:
         sql.append(f"""
             INSERT INTO Rce VALUES {insert_update_rce} AS new
@@ -220,6 +254,110 @@ def edit_rce():
     if delete_rce:
         sql.append(f"""
             DELETE FROM Rce WHERE `id` IN ({delete_rce});
+        """)
+
+    return sql
+
+def edit_agent():
+    df_original = fetch_data('Agent Editing').reset_index()
+    df_original['ID'] = df_original['ID'].astype(str)
+    
+    df_modified: pd.DataFrame = st.data_editor(
+        df_original, num_rows='dynamic',
+        use_container_width=True, on_change=is_editing,
+        column_config={
+            'ID': st.column_config.TextColumn(disabled=True, default='auto'),
+            'RCE': st.column_config.SelectboxColumn(
+                options=fetch_data_primary('Rce Id Name'), required=True
+            ),
+            'NIK': st.column_config.TextColumn(
+                default=None, max_chars=12,
+                required=True, validate='[A-Za-z0-9]+'),
+            'Name': st.column_config.TextColumn(
+                required=True, default='Nama Agent'
+            ),
+            'Employment Date': st.column_config.DateColumn(
+                required=True, default=datetime.now().date(), format='DD/MM/YYYY'
+            ),
+            'End Date': st.column_config.DateColumn(
+                format='DD/MM/YYYY'
+            )
+        }
+    )
+
+    df_modified['ID'] = df_modified['ID'].replace('auto', None)
+    duplicates_check = df_modified[df_modified['NIK'].duplicated(keep=False)]
+
+    if not all(duplicates_check.duplicated(['NIK', 'Name'], keep=False)):
+        ss.invalid_edit = True
+        st.error('NIK dan Nama harus konsisten', icon='❗')
+    else:
+        ss.invalid_edit = False
+    
+    changes = df_modified.merge(
+        df_original, indicator = True, how='outer',
+    ).loc[lambda x : x['_merge'] != 'both']
+
+    changes = changes.dropna(subset=['NIK'])
+    changes.fillna({
+        'ID': 'NULL', 'Employment Date': 'NULL', 'End Date': 'NULL'
+    }, inplace=True)
+    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+    changes['Update'] = (
+        (changes.duplicated(subset=['ID', 'NIK'], keep=False)) &
+        (changes['Difference'] == 'right_only')
+    )
+    changes['Employment Date'] = changes['Employment Date'].astype(str)
+    changes['End Date'] = changes['End Date'].astype(str)
+    changes['RCE'] = changes['RCE'].str.split(':').str[0]
+
+    insert_update_person = changes[
+        changes['Difference'] == 'left_only'
+    ][[
+        'NIK', 'Name'
+    ]].values
+    insert_update_person = tuple(map(tuple, insert_update_person))
+    insert_update_person = ', '.join([str(i) for i in insert_update_person])
+    insert_update_person = insert_update_person.replace("'NULL'", 'NULL')
+
+    insert_update_agent = changes[
+        changes['Difference'] == 'left_only'
+    ][[
+        'ID', 'NIK', 'RCE',
+        'Employment Date', 'End Date'
+    ]].values
+    insert_update_agent = tuple(map(tuple, insert_update_agent))
+    insert_update_agent = ', '.join([str(i) for i in insert_update_agent])
+    insert_update_agent = insert_update_agent.replace("'NULL'", 'NULL')
+
+    delete_agent = changes[
+        (changes['Difference'] == 'right_only') &
+        (changes['Update'] == False).values
+    ]['ID'].values
+    delete_agent = ', '.join([f"'{i}'" for i in delete_agent])
+
+    sql = []
+
+    if insert_update_person:
+        sql.append(f"""
+            INSERT INTO Person VALUES {insert_update_person} AS new
+                ON DUPLICATE KEY UPDATE
+                `name` = new.`name`;
+        """)
+        
+    if insert_update_agent:
+        sql.append(f"""
+            INSERT INTO Agent VALUES {insert_update_agent} AS new
+                ON DUPLICATE KEY UPDATE
+                agent_nik = new.agent_nik,
+                rce_id = new.rce_id,
+                employment_date = new.employment_date,
+                end_date = new.end_date;
+        """)
+
+    if delete_agent:
+        sql.append(f"""
+            DELETE FROM Agent WHERE `id` IN ({delete_agent});
         """)
 
     return sql
