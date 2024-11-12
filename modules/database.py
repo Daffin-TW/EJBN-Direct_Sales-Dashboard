@@ -8,19 +8,29 @@ import pandas as pd
 
 st.cache_resource(show_spinner=False, ttl=300)
 def connect_db():
-    db_connection = mysql.connector.connect(
-        host=st.secrets.db_credentials.host,
-        user=st.secrets.db_credentials.username,
-        password=st.secrets.db_credentials.password,
-        database=st.secrets.db_credentials.database
-    )
+    try:
+        db_connection = mysql.connector.connect(
+            host=st.secrets.db_credentials.host,
+            user=st.secrets.db_credentials.username,
+            password=st.secrets.db_credentials.password,
+            database=st.secrets.db_credentials.database
+        )
 
-    return db_connection
+        return db_connection
+    
+    except:
+        st.toast("""
+            Mengalami kendala? Hubungi [Daffin_TW](https://wa.me/6282332232896)
+            untuk bertanya atau perbaikan.
+        """, icon='🚨')
+        st.error('⛔ Tidak terhubung dengan database.')
 
 def check_connection():
     if not ss.db_connection.is_connected():
-        st.toast('Database tidak terhubung. Mencoba untuk menghubung kembali',
-                 icon='⛔')
+        st.toast(
+            'Database tidak terhubung. Mencoba untuk menghubung kembali.',
+            icon='⛔'
+        )
         st.cache_resource.clear()
         ss.db_connection = connect_db()
 
