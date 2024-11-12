@@ -23,7 +23,8 @@ def connect_db():
             Mengalami kendala? Hubungi [Daffin_TW](https://wa.me/6282332232896)
             untuk bertanya atau perbaikan.
         """, icon='🚨')
-        st.error('⛔ Tidak terhubung dengan database.')
+        st.error('⛔ Database tidak bisa dihubungi.')
+        st.stop()
 
 def check_connection():
     if not ss.db_connection.is_connected():
@@ -49,8 +50,7 @@ def fetch_data(table: str):
     match table:
         case 'Channel':
             sql = 'SELECT `code` AS `Code`, area AS "Area" FROM Channel;'
-            return sql_to_dataframe(sql)
-        
+
         case 'Person':
             sql = 'SELECT nik AS "NIK", `name` AS "NAME";'
 
@@ -58,34 +58,63 @@ def fetch_data(table: str):
             sql = """
                 SELECT id AS "ID", nik AS "NIK", `name` AS "Name", channel_code
                     AS "Channel", employment_date AS "Employment Date",
-                    end_date AS "End Date" FROM Rce AS R INNER JOIN Person AS P
+                    end_date AS "End Date"
+                FROM Rce AS R INNER JOIN Person AS P
                     ON R.rce_nik = P.nik;"""
-            return sql_to_dataframe(sql)
         
         case 'Agent Editing':
             sql = """
                 SELECT A.id AS "ID", CONCAT(R.id, ": ", PR.name) AS "RCE",
                     PA.nik AS "NIK", PA.`name` AS "Name", A.employment_date
                     AS "Employment Date", A.end_date AS "End Date" 
-                    FROM Person AS PR INNER JOIN Rce AS R
+                FROM Person AS PR INNER JOIN Rce AS R
                     ON PR.nik = R.rce_nik INNER JOIN Agent AS A
                     ON R.id = A.rce_id INNER JOIN Person AS PA
                     ON A.agent_nik = PA.nik;"""
-            return sql_to_dataframe(sql)
         
         case 'Agent':
             sql = """
                 SELECT A.id AS "ID", R.id AS "RCE ID", PA.nik AS "NIK",
                     PA.`name` AS "Name", PR.`name` AS "RCE", A.employment_date
                     AS "Employment Date", A.end_date AS "End Date" 
-                    FROM Person AS PR INNER JOIN Rce AS R
+                FROM Person AS PR INNER JOIN Rce AS R
                     ON PR.nik = R.rce_nik INNER JOIN Agent AS A
                     ON R.id = A.rce_id INNER JOIN Person AS PA
                     ON A.agent_nik = PA.nik;"""
-            return sql_to_dataframe(sql)
         
+        case 'RCE Target':
+            sql = """
+                SELECT
+                    RT.id AS "ID", YEAR(RT.target_date) AS "Tahun",
+                    MONTHNAME(RT.target_date) AS "Bulan", P.`name` AS "RCE",
+                    RT.target_ga_cpp AS "Target GA CPP", RT.target_ga_only AS
+                    "Target GA Only", RT.target_revenue AS "Target Revenue"
+                FROM RceTarget AS RT
+                    INNER JOIN Rce AS R ON RT.rce_id = R.id
+                    INNER JOIN Person AS P ON R.rce_nik = P.nik
+                ORDER BY
+                    RT.id;
+            """
+
+        case 'RCE Target Editing':
+            sql = """
+                SELECT
+                    RT.id AS "ID", YEAR(RT.target_date) AS "Tahun",
+                    MONTHNAME(RT.target_date) AS "Bulan",
+                    CONCAT(R.id, ": ", P.name) AS "RCE", RT.target_ga_cpp AS
+                    "Target GA CPP", RT.target_ga_only AS "Target GA Only",
+                    RT.target_revenue AS "Target Revenue"
+                FROM RceTarget AS RT
+                    INNER JOIN Rce AS R ON RT.rce_id = R.id
+                    INNER JOIN Person AS P ON R.rce_nik = P.nik
+                ORDER BY
+                    RT.id;
+            """
+
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')
+        
+    return sql_to_dataframe(sql)
         
 def fetch_data_primary(table: str):
     match table:
@@ -370,6 +399,102 @@ def edit_agent():
             DELETE FROM Agent WHERE `id` IN ({delete_agent});
         """)
 
+    return sql
+
+def edit_rce_target():
+    df_original = fetch_data('RCE Target Editing').reset_index()
+    df_original['ID'] = df_original['ID'].astype(str)
+    
+    month = {
+        1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May',
+        6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October',
+        11: 'November', 12: 'December'
+    }
+    month_number = {j: i for i, j in month.items()}
+
+    df_modified: pd.DataFrame = st.data_editor(
+        df_original, num_rows='dynamic',
+        use_container_width=True, on_change=is_editing,
+        column_config={
+            'ID': st.column_config.TextColumn(disabled=True, default='auto'),
+            'RCE': st.column_config.SelectboxColumn(
+                options=fetch_data_primary('Rce Id Name'), required=True,
+            ),
+            'Tahun': st.column_config.NumberColumn(
+                required=True, default=datetime.now().year,
+                min_value=2000, max_value=9999, step=1, format='%i'
+            ),
+            'Bulan': st.column_config.SelectboxColumn(
+                required=True, options=month.values(),
+                default=month[datetime.now().month]
+            ),
+            'Target GA CPP': st.column_config.NumberColumn(),
+            'Target GA Only': st.column_config.NumberColumn(),
+            'Target Revenue': st.column_config.NumberColumn()
+        }
+    )
+
+    df_modified['ID'] = df_modified['ID'].replace('auto', None)
+
+    if any(df_modified.duplicated(['Tahun', 'Bulan', 'RCE'], keep=False)):
+        ss.invalid_edit = True
+        st.error('Terdapat tanggal target yang sama untuk satu RCE', icon='❗')
+    else:
+        ss.invalid_edit = False
+    
+    changes = df_modified.merge(
+        df_original, indicator = True, how='outer',
+    ).loc[lambda x : x['_merge'] != 'both']
+
+    changes.fillna({
+        'ID': 'NULL', 'Target GA CPP': 'NULL',
+        'Target GA Only': 'NULL', 'Target Revenue': 'NULL'
+    }, inplace=True)
+    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+    changes['Update'] = (
+        (changes.duplicated(subset=['ID'], keep=False)) &
+        (changes['Difference'] == 'right_only')
+    )
+    changes['Target Date'] = (
+        changes['Tahun'].astype(int).astype(str) + '-' +
+        changes['Bulan'].map(month_number).astype(str) + '-1'
+    )
+    changes['RCE'] = changes['RCE'].str.split(':').str[0]
+
+    insert_update_target = changes[
+        changes['Difference'] == 'left_only'
+    ][[
+        'ID', 'Target Date', 'RCE', 'Target GA CPP',
+        'Target GA Only', 'Target Revenue'
+    ]].values
+    insert_update_target = tuple(map(tuple, insert_update_target))
+    insert_update_target = ', '.join([str(i) for i in insert_update_target])
+    insert_update_target = insert_update_target.replace("'NULL'", 'NULL')
+
+    delete_target = changes[
+        (changes['Difference'] == 'right_only') &
+        (changes['Update'] == False).values
+    ]['ID'].values
+    delete_target = ', '.join([f"'{i}'" for i in delete_target])
+
+    sql = []
+
+    if insert_update_target:
+        sql.append(f"""
+            INSERT INTO RceTarget VALUES {insert_update_target} AS new
+                ON DUPLICATE KEY UPDATE
+                target_date = new.target_date,
+                rce_id = new.rce_id,
+                target_ga_cpp = new.target_ga_cpp,
+                target_ga_only = new.target_ga_only,
+                target_revenue = new.target_revenue;
+        """)
+
+    if delete_target:
+        sql.append(f"""
+            DELETE FROM RceTarget WHERE `id` IN ({delete_target});
+        """)
+    
     return sql
 
 def execute_sql_query(sql: list):

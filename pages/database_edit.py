@@ -1,6 +1,6 @@
 from modules import (
     init_configuration, init_content, connect_db, check_connection,
-    edit_channel, edit_rce, edit_agent, execute_sql_query)
+    edit_channel, edit_rce, edit_agent, edit_rce_target, execute_sql_query)
 from streamlit import session_state as ss
 from datetime import datetime
 import streamlit as st
@@ -27,7 +27,9 @@ def current_table():
     button_edit_database = {
         'Channel': ss.button_channel,
         'RCE': ss.button_rce,
-        'Agent': ss.button_agent
+        'Agent': ss.button_agent,
+        'RCE Target': ss.button_rce_target,
+        'Agent Target': ss.button_agent_target
     }
 
     ss.edit_selection = ''.join([
@@ -64,48 +66,58 @@ def apply_button(sql: str):
 
 initialization()
 
-col_channel, col_rce, col_agent = st.columns(3)
-col1, col2 = st.columns((1, 3))
+columns = st.columns(5)
 
-col_channel.button(
+columns[0].button(
     'Channel', key='button_channel',
     use_container_width=True, on_click=current_table)
-col_rce.button(
+columns[1].button(
     'RCE', key='button_rce',
     use_container_width=True, on_click=current_table)
-col_agent.button(
+columns[2].button(
     'Agent', key='button_agent', 
     use_container_width=True, on_click=current_table)
 
-with col1:
-    st.markdown('### Filter')
+columns[3].button(
+    'RCE Target', key='button_rce_target',
+    use_container_width=True, on_click=current_table)
+columns[4].button(
+    'Agent Target', key='button_agent_target', 
+    use_container_width=True, on_click=current_table)
 
-with col2:
-    st.markdown(f'### Tabel {ss.edit_selection}')
+st.markdown(f'### Tabel {ss.edit_selection}')
 
-    match ss.edit_selection:
-        case 'Channel':
-            is_encounter_an_error()
-            sql = edit_channel()
+match ss.edit_selection:
+    case 'Channel':
+        is_encounter_an_error()
+        sql = edit_channel()
 
-            if sql:
-                apply_button(sql)
+        if sql:
+            apply_button(sql)
 
-        case 'RCE':
-            sql = edit_rce()
-            is_encounter_an_error()
-            
-            if sql:
-                st.write(sql)
-                apply_button(sql)
-
-        case 'Agent':
-            is_encounter_an_error()
-            sql = edit_agent()
-            
-            if sql:
-                st.write(sql)
-                apply_button(sql)
+    case 'RCE':
+        sql = edit_rce()
+        is_encounter_an_error()
         
-        case _:
-            pass
+        if sql:
+            apply_button(sql)
+
+    case 'Agent':
+        is_encounter_an_error()
+        sql = edit_agent()
+        
+        if sql:
+            apply_button(sql)
+
+    case 'RCE Target':
+        is_encounter_an_error()
+        sql = edit_rce_target()
+        
+        if sql:
+            apply_button(sql)
+
+    case 'Agent Target':
+        st.write('Work in progress')
+    
+    case _:
+        pass

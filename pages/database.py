@@ -49,7 +49,8 @@ if ss.edit_button:
 
 # Select database category
 tab_agent, tab_target, tab_activation = st.tabs(
-    ('Agent', 'Target', 'Daily Activation'))
+    ('Agent', 'Target', 'Daily Activation')
+)
 
 # Add a filter function on the sidebar
 with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
