@@ -1,6 +1,7 @@
 from modules import (
     init_configuration, init_content, connect_db, check_connection,
-    edit_channel, edit_rce, edit_agent, edit_rce_target, execute_sql_query)
+    edit_channel, edit_rce, edit_agent, edit_rce_target, edit_agent_target,
+    execute_sql_query)
 from streamlit import session_state as ss
 from datetime import datetime
 import streamlit as st
@@ -117,7 +118,13 @@ match ss.edit_selection:
             apply_button(sql)
 
     case 'Agent Target':
-        st.write('Work in progress')
+        is_encounter_an_error()
+        sql = edit_agent_target()
+        
+        if sql:
+            apply_button(sql)
     
     case _:
         pass
+
+st.write(sql)
