@@ -119,7 +119,8 @@ def fetch_data(table: str):
                         MONTHNAME(RT.target_date), ", ", YEAR(RT.target_date)
                     ) AS "RCE Target ID",
                     CONCAT(
-                        `AT`.agent_id, ": ", R.channel_code, " - ", PA.`name`
+                        `AT`.agent_id, ": ", PA.nik, " - ", R.channel_code,
+                        " - ", PA.`name`
                     ) AS "Agent",
                     `AT`.target_ga_cpp AS "Target GA CPP",
                     `AT`.target_ga_only AS "Target GA Only"
@@ -131,6 +132,23 @@ def fetch_data(table: str):
                     INNER JOIN Person AS PA ON A.agent_nik = PA.nik
                 ORDER BY
                     `AT`.id;
+            """
+
+        case 'Activation Editing':
+            sql = """
+                SELECT
+                    DA.id AS "ID", DA.activation_date AS "Date", DA.product AS
+                    "Product", DA.tenure AS "Tenure", CONCAT(
+                        A.id, ": ", P.nik, " - ", R.channel_code, " - ", P.`name`
+                    ) AS "Agent", DA.order_type AS "Order Type",
+                    DA.tactical_regular AS "Tactical Regular",
+                    DA.guaranteed_revenue AS "Guaranteed Revenue"
+                FROM DailyActivation AS DA
+                    INNER JOIN Agent AS A ON DA.agent_id = A.id
+                    INNER JOIN Person AS P ON A.agent_nik = P.nik
+                    INNER JOIN Rce AS R ON A.rce_id = R.id
+                ORDER BY
+                    DA.activation_date, DA.id;
             """
 
         case _:
@@ -156,7 +174,7 @@ def fetch_data_primary(table: str):
         
         case 'Agent Id Name':
             sql = """SELECT CONCAT(
-                            A.id, ": ", R.channel_code, " - ", P.`name`
+                            A.id, ": ", P.nik, " - ", R.channel_code, " - ", P.`name`
                         ) AS "Agent" FROM Agent AS A
                         INNER JOIN Rce AS R ON A.rce_id = R.id
                         INNER JOIN Person AS P ON A.agent_nik = P.nik
@@ -220,7 +238,7 @@ def edit_channel():
 
     delete = changes[
         (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False).values
+        (changes['Update'] == False)
     ]['Code'].values
     delete = ', '.join([f"'{i}'" for i in delete])
 
@@ -312,7 +330,7 @@ def edit_rce():
 
     delete_rce = changes[
         (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False).values
+        (changes['Update'] == False)
     ]['ID'].values
     delete_rce = ', '.join([f"'{i}'" for i in delete_rce])
 
@@ -416,7 +434,7 @@ def edit_agent():
 
     delete_agent = changes[
         (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False).values
+        (changes['Update'] == False)
     ]['ID'].values
     delete_agent = ', '.join([f"'{i}'" for i in delete_agent])
 
@@ -518,7 +536,7 @@ def edit_rce_target():
 
     delete_target = changes[
         (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False).values
+        (changes['Update'] == False)
     ]['ID'].values
     delete_target = ', '.join([f"'{i}'" for i in delete_target])
 
@@ -545,12 +563,6 @@ def edit_rce_target():
 def edit_agent_target():
     df_original = fetch_data('Agent Target Editing').reset_index()
     df_original['ID'] = df_original['ID'].astype(str)
-    
-    month = {
-        1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May',
-        6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October',
-        11: 'November', 12: 'December'
-    }
 
     df_modified: pd.DataFrame = st.data_editor(
         df_original, num_rows='dynamic',
@@ -602,7 +614,7 @@ def edit_agent_target():
 
     delete_target = changes[
         (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False).values
+        (changes['Update'] == False)
     ]['ID'].values
     delete_target = ', '.join([f"'{i}'" for i in delete_target])
 
@@ -621,6 +633,142 @@ def edit_agent_target():
     if delete_target:
         sql.append(f"""
             DELETE FROM AgentTarget WHERE `id` IN ({delete_target});
+        """)
+    
+    return sql
+
+def activation_upload(data: pd.DataFrame):
+    changes = data.copy()
+    changes.fillna({
+        'Date': 'NULL', 'Product': 'NULL', 'Tenure': 'NULL',
+        'Order Type': 'NULL', 'Tactical Regular': 'NULL',
+        'Guaranteed Revenue': 'NULL'
+    }, inplace=True)
+
+    delete_activation = [changes['Date'].min(), changes['Date'].max()]
+
+    changes['Agent'] = changes['Agent'].str.split(':').str[0]
+    changes['Date'] = changes['Date'].astype(str)
+
+    insert_activation = changes[[
+        'Date', 'Product', 'Tenure', 'Agent', 'Order Type',
+        'Tactical Regular', 'Guaranteed Revenue'
+    ]].values
+    insert_activation = tuple(map(tuple, insert_activation))
+    insert_activation = ', '.join([str(i) for i in insert_activation])
+    insert_activation = insert_activation.replace("'NULL'", 'NULL')
+
+    sql = []
+
+    if delete_activation:
+        sql.append(f"""
+            DELETE FROM DailyActivation
+            WHERE activation_date BETWEEN '{delete_activation[0]}' AND 
+            '{delete_activation[1]}';
+        """)
+
+    if insert_activation:
+        sql.append(f"""
+            INSERT INTO DailyActivation (
+                activation_date,
+                product,
+                tenure,
+                agent_id,
+                order_type,
+                tactical_regular,
+                guaranteed_revenue
+            )
+            VALUES
+                {insert_activation};
+        """)
+    
+    return sql
+
+def edit_activation(data: pd.DataFrame = None):
+    if data is not None:
+        return activation_upload(data)
+
+    else:
+        df_original = fetch_data('Activation Editing').reset_index()
+        df_original['ID'] = df_original['ID'].astype(str)
+    
+    order_type = ['New Registration', 'Migration', 'Change Postpaid Plan']
+    tactical_regular = ['Tactical', 'Regular']
+
+    df_modified: pd.DataFrame = st.data_editor(
+        df_original, num_rows='dynamic',
+        use_container_width=True, on_change=is_editing,
+        column_config={
+            'ID': st.column_config.TextColumn(disabled=True, default='auto'),
+            'Date': st.column_config.DateColumn(
+                required=True, default=datetime.now().date(), format='DD/MM/YYYY'
+            ),
+            'Tenure': st.column_config.NumberColumn(min_value=1, step=1),
+            'Agent': st.column_config.SelectboxColumn(
+                options=fetch_data_primary('Agent Id Name'), required=True,
+            ),
+            'Order Type': st.column_config.SelectboxColumn(
+                options=order_type, default=order_type[0]
+            ),
+            'Tactical Regular': st.column_config.SelectboxColumn(
+                options=tactical_regular, default=tactical_regular[0]
+            ),
+            'Guaranteed Revenue': st.column_config.NumberColumn(min_value=0)
+        }
+    )
+
+    df_modified['ID'] = df_modified['ID'].replace('auto', None)
+    
+    changes = df_modified.merge(
+        df_original, indicator = True, how='outer',
+    ).loc[lambda x : x['_merge'] != 'both']
+
+    changes.fillna({
+        'ID': 'NULL', 'Date': 'NULL', 'Product': 'NULL', 'Tenure': 'NULL',
+        'Order Type': 'NULL', 'Tactical Regular': 'NULL',
+        'Guaranteed Revenue': 'NULL'
+    }, inplace=True)
+    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+    changes['Update'] = (
+        (changes.duplicated(subset=['ID'], keep=False)) &
+        (changes['Difference'] == 'right_only')
+    )
+    changes['Agent'] = changes['Agent'].str.split(':').str[0]
+    changes['Date'] = changes['Date'].astype(str)
+
+    insert_update_activation = changes[
+        changes['Difference'] == 'left_only'
+    ][[
+        'ID', 'Date', 'Product', 'Tenure', 'Agent', 'Order Type',
+        'Tactical Regular', 'Guaranteed Revenue'
+    ]].values
+    insert_update_activation = tuple(map(tuple, insert_update_activation))
+    insert_update_activation = ', '.join([str(i) for i in insert_update_activation])
+    insert_update_activation = insert_update_activation.replace("'NULL'", 'NULL')
+
+    delete_activation = changes[
+        (changes['Difference'] == 'right_only') &
+        (changes['Update'] == False)
+    ]['ID'].values
+    delete_activation = ', '.join([f"'{i}'" for i in delete_activation])
+
+    sql = []
+
+    if insert_update_activation:
+        sql.append(f"""
+            INSERT INTO DailyActivation VALUES {insert_update_activation} AS new
+                ON DUPLICATE KEY UPDATE
+                activation_date = new.activation_date,
+                tenure = new.tenure,
+                agent_id = new.agent_id,
+                order_type = new.order_type,
+                tactical_regular = new.tactical_regular,
+                guaranteed_revenue = new.guaranteed_revenue;
+        """)
+
+    if delete_activation:
+        sql.append(f"""
+            DELETE FROM DailyActivation WHERE `id` IN ({delete_activation});
         """)
     
     return sql
