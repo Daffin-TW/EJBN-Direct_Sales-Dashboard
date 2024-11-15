@@ -1,7 +1,7 @@
-from .database import fetch_data, fetch_data_primary
+from streamlit import session_state as ss
+from .database import fetch_data
 import streamlit as st
 import pandas as pd
-import numpy as np
 
 
 def tenure_extraction(data: str):
@@ -40,12 +40,12 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
     agent.drop_duplicates(['ID', 'NIK'], keep='last', inplace=True)
     agent['ID'] = agent['ID'].astype(str)
     
-    result = df.merge(agent, left_on='nik_sales', right_on='NIK', how='left')
-    result.sort_values('activation_date', inplace=True)
-    result.reset_index(drop=True, inplace=True)
-    result['NIK'] = (
-        result['ID'] + ': ' + result['NIK'] + ' - ' + result['dealer_id'] +
-        ' - ' + result['Name']
+    merge = df.merge(agent, left_on='nik_sales', right_on='NIK', how='left')
+    merge.sort_values('activation_date', inplace=True)
+    merge.reset_index(drop=True, inplace=True)
+    merge['NIK'] = (
+        merge['ID'] + ': ' + merge['NIK'] + ' - ' + merge['dealer_id'] +
+        ' - ' + merge['Name']
     )
 
     selected_column = {
@@ -55,7 +55,15 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
         'Guaranteed Revenue (Mio)': 'Guaranteed Revenue'
     }
 
-    result = result[selected_column.keys()]
+    result = merge[selected_column.keys()].copy()
     result.rename(columns=selected_column, inplace=True)
+
+    if not all(result['Agent'].isna()):
+        st.error('Terdapat Agent yang belum terdaftar pada database', icon='❗')
+        st.write(merge[merge['NIK'].isna()]['nik_sales'].unique().tolist())
+        result = result[result['Agent'].isna()]
+        ss.invalid_edit = True
+    else:
+        ss.invalid_edit = False
 
     return result

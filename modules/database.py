@@ -9,14 +9,15 @@ import pandas as pd
 st.cache_resource(show_spinner=False, ttl=300)
 def connect_db():
     try:
-        db_connection = mysql.connector.connect(
-            host=st.secrets.db_credentials.host,
-            user=st.secrets.db_credentials.username,
-            password=st.secrets.db_credentials.password,
-            database=st.secrets.db_credentials.database
-        )
+        with st.spinner('Menghubungi database, mohon ditunggu...'):
+            db_connection = mysql.connector.connect(
+                host=st.secrets.db_credentials.host,
+                user=st.secrets.db_credentials.username,
+                password=st.secrets.db_credentials.password,
+                database=st.secrets.db_credentials.database
+            )
 
-        return db_connection
+            return db_connection
     
     except:
         st.toast("""

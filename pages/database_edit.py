@@ -44,7 +44,7 @@ def apply_button_click(sql: list, dialog: bool = False):
     ss.done_editing = True
 
     if dialog:
-        return None
+        st.rerun()
 
     if result[0]:
         st.toast('Perubahan Berhasil disimpan')
@@ -87,19 +87,18 @@ def upload_file():
     tanggal = [df['Date'].min(), df['Date'].max()]
     
     st.write(df)
-    st.markdown(
-        f'#### Perubahan akan menghapus data dari tanggal {tanggal[0]} ' +
-        f'sampai dengan {tanggal[1]}'
+
+    if ss.get('invalid_edit', False):
+        st.stop()
+
+    st.warning(
+        f'Perubahan akan menghapus data dari tanggal **{tanggal[0]}** ' +
+        f'sampai dengan **{tanggal[1]}**', icon='⚠'
     )
     
     sql = edit_activation(df)
-    on_click = st.button(
-        'Simpan Perubahan', key='apply_button',
-        on_click=lambda: apply_button_click(sql, True)
-    )
-
-    if on_click:
-        st.rerun()
+    
+    apply_button(sql)
 
 
 initialization()
@@ -166,7 +165,7 @@ match ss.edit_selection:
             apply_button(sql)
 
     case 'Daily Activation':
-        col1, col2 = st.columns((2, 5))
+        col1, col2 = st.columns((1, 5))
         
         with col1:
             st.markdown('Unggah File **Daily Activation**')
