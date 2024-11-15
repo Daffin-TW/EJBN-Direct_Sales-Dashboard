@@ -128,45 +128,50 @@ columns[5].button(
 
 st.markdown(f'### Tabel {ss.edit_selection}')
 
+col1, col2 = st.columns((1, 5))
+
 match ss.edit_selection:
     case 'Channel':
-        is_encounter_an_error()
-        sql = edit_channel()
+        with col2:
+            is_encounter_an_error()
+            sql = edit_channel()
 
-        if sql:
-            apply_button(sql)
+            if sql:
+                apply_button(sql)
 
     case 'RCE':
-        sql = edit_rce()
-        is_encounter_an_error()
-        
-        if sql:
-            apply_button(sql)
+        with col2:
+            sql = edit_rce()
+            is_encounter_an_error()
+            
+            if sql:
+                apply_button(sql)
 
     case 'Agent':
-        is_encounter_an_error()
-        sql = edit_agent()
-        
-        if sql:
-            apply_button(sql)
+        with col2:
+            is_encounter_an_error()
+            sql = edit_agent()
+            
+            if sql:
+                apply_button(sql)
 
     case 'RCE Target':
-        is_encounter_an_error()
-        sql = edit_rce_target()
-        
-        if sql:
-            apply_button(sql)
+        with col2:
+            is_encounter_an_error()
+            sql = edit_rce_target()
+            
+            if sql:
+                apply_button(sql)
 
     case 'Agent Target':
-        is_encounter_an_error()
-        sql = edit_agent_target()
-        
-        if sql:
-            apply_button(sql)
+        with col2:
+            is_encounter_an_error()
+            sql = edit_agent_target()
+            
+            if sql:
+                apply_button(sql)
 
-    case 'Daily Activation':
-        col1, col2 = st.columns((1, 5))
-        
+    case 'Daily Activation':        
         with col1:
             st.markdown('Unggah File **Daily Activation**')
             st.button(
