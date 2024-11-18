@@ -149,7 +149,7 @@ def fetch_data(table: str, filter_query: str = ''):
                     ) AS "RCE Target ID",
                     CONCAT(
                         `AT`.agent_id, ': ', PA.nik, ' - ', R.channel_code,
-                        " - ", PA.`name`
+                        ' - ', PA.`name`
                     ) AS "Agent",
                     `AT`.target_ga AS "Target GA",
                     `AT`.target_cpp AS "Target CPP"
