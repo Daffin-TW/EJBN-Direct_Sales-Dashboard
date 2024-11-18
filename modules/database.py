@@ -12,6 +12,7 @@ filterwarnings(
     category=UserWarning,
     message='.*pandas only supports SQLAlchemy connectable.*'
 )
+pd.set_option('future.no_silent_downcasting', True)
 
 st.cache_resource(show_spinner=False, ttl=300)
 def connect_db():
@@ -81,7 +82,7 @@ def fetch_data(table: str, filter_query: str = ''):
         
         case 'Agent':
             sql = """
-                SELECT A.id AS "ID", R.id AS "RCE ID", PA.nik AS "NIK",
+                SELECT A.id AS "ID", PA.nik AS "NIK",
                     PA.`name` AS "Name", PR.`name` AS "RCE", A.employment_date
                     AS "Employment Date", A.end_date AS "End Date" 
                 FROM Person AS PR INNER JOIN Rce AS R
@@ -94,8 +95,8 @@ def fetch_data(table: str, filter_query: str = ''):
                 SELECT
                     RT.id AS "ID", YEAR(RT.target_date) AS "Tahun",
                     MONTHNAME(RT.target_date) AS "Bulan", P.`name` AS "RCE",
-                    RT.target_ga_cpp AS "Target GA CPP", RT.target_ga_only AS
-                    "Target GA Only", RT.target_revenue AS "Target Revenue"
+                    RT.target_ga AS "Target GA", RT.target_cpp AS
+                    "Target CPP", RT.target_revenue AS "Target Revenue"
                 FROM RceTarget AS RT
                     INNER JOIN Rce AS R ON RT.rce_id = R.id
                     INNER JOIN Person AS P ON R.rce_nik = P.nik
@@ -108,8 +109,8 @@ def fetch_data(table: str, filter_query: str = ''):
                 SELECT
                     RT.id AS "ID", YEAR(RT.target_date) AS "Tahun",
                     MONTHNAME(RT.target_date) AS "Bulan",
-                    CONCAT(R.id, ": ", P.name) AS "RCE", RT.target_ga_cpp AS
-                    "Target GA CPP", RT.target_ga_only AS "Target GA Only",
+                    CONCAT(R.id, ": ", P.name) AS "RCE", RT.target_ga AS
+                    "Target GA", RT.target_cpp AS "Target CPP",
                     RT.target_revenue AS "Target Revenue"
                 FROM RceTarget AS RT
                     INNER JOIN Rce AS R ON RT.rce_id = R.id
@@ -117,6 +118,24 @@ def fetch_data(table: str, filter_query: str = ''):
                 {filter_query}
                 ORDER BY
                     RT.id
+            """
+
+        case 'Agent Target':
+            sql = f"""
+                SELECT
+                    `AT`.id AS "ID",
+                    YEAR(RT.target_date) AS "Tahun",
+                    MONTHNAME(RT.target_date) AS "Bulan",
+                    PA.`name` AS "Agent",
+                    `AT`.target_ga AS "Target GA",
+                    `AT`.target_cpp AS "Target CPP"
+                FROM AgentTarget AS `AT`
+                    INNER JOIN RceTarget AS RT ON `AT`.rce_target_id = RT.id
+                    INNER JOIN Agent AS A ON `AT`.agent_id = A.id
+                    INNER JOIN Person AS PA ON A.agent_nik = PA.nik
+                {filter_query}
+                ORDER BY
+                    `AT`.id
             """
 
         case 'Agent Target Editing':
@@ -130,8 +149,8 @@ def fetch_data(table: str, filter_query: str = ''):
                         `AT`.agent_id, ": ", PA.nik, " - ", R.channel_code,
                         " - ", PA.`name`
                     ) AS "Agent",
-                    `AT`.target_ga_cpp AS "Target GA CPP",
-                    `AT`.target_ga_only AS "Target GA Only"
+                    `AT`.target_ga AS "Target GA",
+                    `AT`.target_cpp AS "Target CPP"
                 FROM AgentTarget AS `AT`
                     INNER JOIN RceTarget AS RT ON `AT`.rce_target_id = RT.id
                     INNER JOIN Rce as R ON RT.rce_id = R.id
@@ -141,6 +160,22 @@ def fetch_data(table: str, filter_query: str = ''):
                 {filter_query}
                 ORDER BY
                     `AT`.id
+            """
+
+        case 'Activation':
+            sql = f"""
+                SELECT
+                    DA.id AS "ID", DA.activation_date AS "Date", DA.product AS
+                    "Product", DA.tenure AS "Tenure", P.`name` AS "Agent",
+                    DA.order_type AS "Order Type",
+                    DA.tactical_regular AS "Tactical Regular",
+                    DA.guaranteed_revenue AS "Guaranteed Revenue"
+                FROM DailyActivation AS DA
+                    INNER JOIN Agent AS A ON DA.agent_id = A.id
+                    INNER JOIN Person AS P ON A.agent_nik = P.nik
+                {filter_query}
+                ORDER BY
+                    DA.activation_date, DA.id
             """
 
         case 'Activation Editing':
@@ -501,8 +536,8 @@ def edit_rce_target(filter_query: str = ''):
                 required=True, options=month.values(),
                 default=month[datetime.now().month]
             ),
-            'Target GA CPP': st.column_config.NumberColumn(),
-            'Target GA Only': st.column_config.NumberColumn(),
+            'Target GA': st.column_config.NumberColumn(),
+            'Target CPP': st.column_config.NumberColumn(),
             'Target Revenue': st.column_config.NumberColumn()
         }
     )
@@ -520,8 +555,8 @@ def edit_rce_target(filter_query: str = ''):
     ).loc[lambda x : x['_merge'] != 'both'].copy()
 
     changes.fillna({
-        'ID': 'NULL', 'Target GA CPP': 'NULL',
-        'Target GA Only': 'NULL', 'Target Revenue': 'NULL'
+        'ID': 'NULL', 'Target GA': 'NULL',
+        'Target CPP': 'NULL', 'Target Revenue': 'NULL'
     }, inplace=True)
     changes.rename(columns={'_merge': 'Difference'}, inplace=True)
     changes['Update'] = (
@@ -537,8 +572,8 @@ def edit_rce_target(filter_query: str = ''):
     insert_update_target = changes[
         changes['Difference'] == 'left_only'
     ][[
-        'ID', 'Target Date', 'RCE', 'Target GA CPP',
-        'Target GA Only', 'Target Revenue'
+        'ID', 'Target Date', 'RCE', 'Target GA',
+        'Target CPP', 'Target Revenue'
     ]].values
     insert_update_target = tuple(map(tuple, insert_update_target))
     insert_update_target = ', '.join([str(i) for i in insert_update_target])
@@ -558,8 +593,8 @@ def edit_rce_target(filter_query: str = ''):
                 ON DUPLICATE KEY UPDATE
                 target_date = new.target_date,
                 rce_id = new.rce_id,
-                target_ga_cpp = new.target_ga_cpp,
-                target_ga_only = new.target_ga_only,
+                target_ga = new.target_ga,
+                target_cpp = new.target_cpp,
                 target_revenue = new.target_revenue;
         """)
 
@@ -585,8 +620,8 @@ def edit_agent_target(filter_query: str = ''):
             'Agent': st.column_config.SelectboxColumn(
                 options=fetch_data_primary('Agent Id Name'), required=True,
             ),
-            'Target GA CPP': st.column_config.NumberColumn(),
-            'Target GA Only': st.column_config.NumberColumn()
+            'Target GA': st.column_config.NumberColumn(),
+            'Target CPP': st.column_config.NumberColumn()
         }
     )
 
@@ -603,7 +638,7 @@ def edit_agent_target(filter_query: str = ''):
     ).loc[lambda x : x['_merge'] != 'both'].copy()
 
     changes.fillna({
-        'ID': 'NULL', 'Target GA CPP': 'NULL', 'Target GA Only': 'NULL'
+        'ID': 'NULL', 'Target GA': 'NULL', 'Target CPP': 'NULL'
     }, inplace=True)
     changes.rename(columns={'_merge': 'Difference'}, inplace=True)
     changes['Update'] = (
@@ -616,7 +651,7 @@ def edit_agent_target(filter_query: str = ''):
     insert_update_target = changes[
         changes['Difference'] == 'left_only'
     ][[
-        'ID', 'RCE Target ID', 'Agent', 'Target GA CPP', 'Target GA Only'
+        'ID', 'RCE Target ID', 'Agent', 'Target GA', 'Target CPP'
     ]].values
     insert_update_target = tuple(map(tuple, insert_update_target))
     insert_update_target = ', '.join([str(i) for i in insert_update_target])
@@ -636,8 +671,8 @@ def edit_agent_target(filter_query: str = ''):
                 ON DUPLICATE KEY UPDATE
                 rce_target_id = new.rce_target_id,
                 agent_id = new.agent_id,
-                target_ga_cpp = new.target_ga_cpp,
-                target_ga_only = new.target_ga_only;
+                target_ga = new.target_ga,
+                target_cpp = new.target_cpp;
         """)
 
     if delete_target:

@@ -105,6 +105,16 @@ def upload_file():
 
 initialization()
 
+with st.sidebar:
+    st.divider()
+    
+    st.button(
+        '◀ Kembali ke Halaman Semula', 'edit_button',
+        use_container_width=True, type='primary'
+    )
+    if ss.edit_button:
+        st.switch_page('pages/database.py')
+
 columns = st.columns(6)
 
 columns[0].button(

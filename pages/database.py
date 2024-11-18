@@ -17,69 +17,22 @@ def initialization():
         ss.db_connection = connect_db()
     check_connection()
 
-# Show specific date filter
-@st.dialog('Filter Tanggal', width='large')
-def tanggal_input():
-    st.logo('images/horizontal_long_logo.png', icon_image='images/logo.png',
-            size='large')
-    date_end = datetime.now()
-    date_start = date_end - timedelta(days=30)
-
-    col_start, col_end = st.columns(2)
-    with col_start:
-        st.markdown('### Date Start')
-        st.date_input('filter_date_start', value=(date_start),
-                      label_visibility='collapsed', format='DD/MM/YYYY')
-    with col_end:
-        st.markdown('### Date End')
-        col_end.date_input('filter_date_start', value=(date_end),
-                           label_visibility='collapsed', format='DD/MM/YYYY')
-
-    apply = st.button('Apply', key='tanggal_apply_button')
-    if apply:
-        st.rerun()
-
 
 initialization()
 
 # Add a button to edit the database
-st.button('⚙ Edit Database', 'edit_button', use_container_width=True)
-if ss.edit_button:
-    st.switch_page('pages/database_edit.py')
+with st.sidebar:
+    st.button(
+        '⚙ Edit Database', 'edit_button',
+        use_container_width=True, type='primary'
+    )
+    if ss.edit_button:
+        st.switch_page('pages/database_edit.py')
 
 # Select database category
 tab_agent, tab_target, tab_activation = st.tabs(
     ('Agent', 'Target', 'Daily Activation')
 )
-
-# Add a filter function on the sidebar
-with st.sidebar.expander('Filter', expanded=True, icon='🔍'):
-    st.markdown('### Nama')
-    st.text_input(
-        'filter_name',
-        placeholder='Filter berdasarkan nama',
-        label_visibility='collapsed'
-    )
-    
-    rce_options = ('Chentia Aisya Oktarina', 'Diaz Yusuf Zakaria', 'Ni Made Ayu Astariani Dewi')
-    # rce_options = fetch_rce_names(_db_cursor).index
-    st.markdown('### RCE')
-    st.multiselect(
-        'filter_rce', options=rce_options, default=None,
-        placeholder='Filter berdasarkan RCE',
-        label_visibility='collapsed')
-    
-    st.markdown('### Tanggal')
-    tanggal_button = st.button('Edit Filter', 'tanggal_button',
-                               use_container_width=True)
-    if tanggal_button:
-        tanggal_input()
-    
-    st.markdown('### Status')
-    status_opt = ('All', 'Active', 'Inactive')
-    st.segmented_control(
-        'filter_status', options=status_opt,
-        default=status_opt[1], label_visibility='collapsed')
 
 # Show agent database
 with tab_agent:
@@ -93,9 +46,54 @@ with tab_agent:
             
     with col2.container(border=True, height=300):
         st.markdown('#### RCE')
-
+        st.dataframe(
+            fetch_data('Rce'), use_container_width=True, hide_index=True,
+            column_config={
+                'Employment Date': st.column_config.DateColumn(
+                    format='DD/MM/YYYY'),
+                'End Date': st.column_config.DateColumn(
+                    format='DD/MM/YYYY')}
+        )
         
     with container.container(border=True):
         st.markdown('#### Agent')
-        
+        st.dataframe(
+            fetch_data('Agent'), use_container_width=True, hide_index=True,
+            column_config={
+                'Employment Date': st.column_config.DateColumn(
+                    format='DD/MM/YYYY'),
+                'End Date': st.column_config.DateColumn(
+                    format='DD/MM/YYYY')}
+        )
+
+with tab_target:
+    col1, col2 = st.columns(2)
+
+    with col1.container(border=True, height=700):
+        st.markdown('#### Target RCE')
+        st.dataframe(
+            fetch_data('RCE Target'), use_container_width=True, height=600,
+            hide_index=True, column_config={
+                'Tahun': st.column_config.NumberColumn(
+                    step=1, format='%i')}
+        )
+
+    with col2.container(border=True, height=700):
+        st.markdown('#### Target Agent')
+        st.dataframe(
+            fetch_data('Agent Target'), use_container_width=True, height=600,
+            hide_index=True, column_config={
+                'Tahun': st.column_config.NumberColumn(
+                    step=1, format='%i')}
+        )
+
+with tab_activation:
+    with st.container(border=True, height=700):
+        st.markdown('#### Daily Activation')
+        st.dataframe(
+            fetch_data('Activation'), use_container_width=True, height=600,
+            hide_index=True, column_config={
+                'Date': st.column_config.DateColumn(format='DD/MM/YYYY')}
+        )
+
 check_connection()

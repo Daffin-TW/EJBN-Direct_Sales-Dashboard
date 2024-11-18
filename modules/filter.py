@@ -1,5 +1,4 @@
 from .database import fetch_data_primary
-from streamlit import session_state as ss
 from datetime import datetime, timedelta
 import streamlit as st
 
