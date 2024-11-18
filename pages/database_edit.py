@@ -1,7 +1,8 @@
 from modules import (
     init_configuration, init_content, connect_db, check_connection,
     edit_channel, edit_rce, edit_agent, edit_rce_target, edit_agent_target,
-    edit_activation, execute_sql_query, preprocessing_daily_activation
+    edit_activation, execute_sql_query, preprocessing_daily_activation,
+    filter_edit
 )
 from streamlit import session_state as ss
 from datetime import datetime
@@ -44,7 +45,7 @@ def apply_button_click(sql: list, dialog: bool = False):
     ss.done_editing = True
 
     if dialog:
-        st.rerun()
+        return None
 
     if result[0]:
         st.toast('Perubahan Berhasil disimpan')
@@ -61,12 +62,12 @@ def is_encounter_an_error():
         ss.error_editing = False
         st.stop()
 
-def apply_button(sql: str):
+def apply_button(sql: str, dialog=False):
     if (sql and not ss.get('invalid_edit', False) and
             not ss.get('done_editing', False)):
-        st.button(
+        return st.button(
             'Simpan Perubahan', key='apply_button',
-            on_click=lambda: apply_button_click(sql)
+            on_click=lambda: apply_button_click(sql, dialog)
         )
 
 @st.dialog('Unggah File', width='large')
@@ -98,7 +99,8 @@ def upload_file():
     
     sql = edit_activation(df)
     
-    apply_button(sql)
+    if apply_button(sql, dialog=True):
+        st.rerun()
 
 
 initialization()
@@ -129,50 +131,64 @@ columns[5].button(
 st.markdown(f'### Tabel {ss.edit_selection}')
 
 col1, col2 = st.columns((1, 5))
+col1.markdown('#### Filter')
+# col2.markdown('#### ')
 
 match ss.edit_selection:
     case 'Channel':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
         with col2:
             is_encounter_an_error()
-            sql = edit_channel()
+            sql = edit_channel(filter_query)
 
             if sql:
                 apply_button(sql)
 
     case 'RCE':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
         with col2:
-            sql = edit_rce()
+            sql = edit_rce(filter_query)
             is_encounter_an_error()
             
             if sql:
                 apply_button(sql)
 
     case 'Agent':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
         with col2:
             is_encounter_an_error()
-            sql = edit_agent()
+            sql = edit_agent(filter_query)
             
             if sql:
                 apply_button(sql)
 
     case 'RCE Target':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
         with col2:
             is_encounter_an_error()
-            sql = edit_rce_target()
+            sql = edit_rce_target(filter_query)
             
             if sql:
                 apply_button(sql)
 
     case 'Agent Target':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
         with col2:
             is_encounter_an_error()
-            sql = edit_agent_target()
+            sql = edit_agent_target(filter_query)
             
             if sql:
                 apply_button(sql)
 
     case 'Daily Activation':        
         with col1:
+            filter_query = filter_edit(ss.edit_selection)
+
             st.markdown('Unggah File **Daily Activation**')
             st.button(
                 'Unggah File Daily Activation', key='button_upload_file',
@@ -181,7 +197,7 @@ match ss.edit_selection:
 
         with col2:
             is_encounter_an_error()
-            sql = edit_activation()
+            sql = edit_activation(filter_query=filter_query)
             
             if sql:
                 apply_button(sql)

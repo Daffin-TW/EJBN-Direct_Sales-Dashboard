@@ -1,10 +1,17 @@
 from mysql.connector.abstracts import MySQLCursorAbstract as db_cur
 from streamlit import session_state as ss
+from warnings import filterwarnings
 from datetime import datetime
 import mysql.connector
 import streamlit as st
 import pandas as pd
 
+
+filterwarnings(
+    "ignore",
+    category=UserWarning,
+    message='.*pandas only supports SQLAlchemy connectable.*'
+)
 
 st.cache_resource(show_spinner=False, ttl=300)
 def connect_db():
@@ -39,39 +46,38 @@ def check_connection():
 @st.cache_data(show_spinner=False, ttl=300)
 def sql_to_dataframe(sql: str):
     check_connection()
-    cursor: db_cur = ss.db_connection.cursor()
-    cursor.execute(sql)
-    df = pd.DataFrame(cursor.fetchall())
-    df.columns = [i[0] for i in cursor.description]
-    cursor.close()
+    df = pd.read_sql(sql, ss.db_connection)
+    return df.set_index(df.columns[0])
 
-    return df.set_index(cursor.description[0][0])
-
-def fetch_data(table: str):
+def fetch_data(table: str, filter_query: str = ''):
     match table:
         case 'Channel':
-            sql = 'SELECT `code` AS `Code`, area AS "Area" FROM Channel;'
+            sql = 'SELECT `code` AS `Code`, area AS "Area" FROM Channel'
 
         case 'Person':
-            sql = 'SELECT nik AS "NIK", `name` AS "NAME";'
+            sql = 'SELECT nik AS "NIK", `name` AS "NAME"'
 
         case 'Rce':
-            sql = """
+            sql = f"""
                 SELECT id AS "ID", nik AS "NIK", `name` AS "Name", channel_code
                     AS "Channel", employment_date AS "Employment Date",
                     end_date AS "End Date"
                 FROM Rce AS R INNER JOIN Person AS P
-                    ON R.rce_nik = P.nik;"""
+                    ON R.rce_nik = P.nik
+                {filter_query}
+            """
         
         case 'Agent Editing':
-            sql = """
+            sql = f"""
                 SELECT A.id AS "ID", CONCAT(R.id, ": ", PR.name) AS "RCE",
                     PA.nik AS "NIK", PA.`name` AS "Name", A.employment_date
                     AS "Employment Date", A.end_date AS "End Date" 
                 FROM Person AS PR INNER JOIN Rce AS R
                     ON PR.nik = R.rce_nik INNER JOIN Agent AS A
                     ON R.id = A.rce_id INNER JOIN Person AS PA
-                    ON A.agent_nik = PA.nik;"""
+                    ON A.agent_nik = PA.nik
+                {filter_query}
+                """
         
         case 'Agent':
             sql = """
@@ -81,7 +87,7 @@ def fetch_data(table: str):
                 FROM Person AS PR INNER JOIN Rce AS R
                     ON PR.nik = R.rce_nik INNER JOIN Agent AS A
                     ON R.id = A.rce_id INNER JOIN Person AS PA
-                    ON A.agent_nik = PA.nik;"""
+                    ON A.agent_nik = PA.nik"""
         
         case 'RCE Target':
             sql = """
@@ -94,11 +100,11 @@ def fetch_data(table: str):
                     INNER JOIN Rce AS R ON RT.rce_id = R.id
                     INNER JOIN Person AS P ON R.rce_nik = P.nik
                 ORDER BY
-                    RT.id;
+                    RT.id
             """
 
         case 'RCE Target Editing':
-            sql = """
+            sql = f"""
                 SELECT
                     RT.id AS "ID", YEAR(RT.target_date) AS "Tahun",
                     MONTHNAME(RT.target_date) AS "Bulan",
@@ -108,12 +114,13 @@ def fetch_data(table: str):
                 FROM RceTarget AS RT
                     INNER JOIN Rce AS R ON RT.rce_id = R.id
                     INNER JOIN Person AS P ON R.rce_nik = P.nik
+                {filter_query}
                 ORDER BY
-                    RT.id;
+                    RT.id
             """
 
         case 'Agent Target Editing':
-            sql = """
+            sql = f"""
                 SELECT
                     `AT`.id AS "ID",
                     CONCAT(RT.id, ": ", PR.`name`, " - ",
@@ -131,12 +138,13 @@ def fetch_data(table: str):
                     INNER JOIN Person PR ON R.rce_nik = PR.nik
                     INNER JOIN Agent AS A ON `AT`.agent_id = A.id
                     INNER JOIN Person AS PA ON A.agent_nik = PA.nik
+                {filter_query}
                 ORDER BY
-                    `AT`.id;
+                    `AT`.id
             """
 
         case 'Activation Editing':
-            sql = """
+            sql = f"""
                 SELECT
                     DA.id AS "ID", DA.activation_date AS "Date", DA.product AS
                     "Product", DA.tenure AS "Tenure", CONCAT(
@@ -148,14 +156,15 @@ def fetch_data(table: str):
                     INNER JOIN Agent AS A ON DA.agent_id = A.id
                     INNER JOIN Person AS P ON A.agent_nik = P.nik
                     INNER JOIN Rce AS R ON A.rce_id = R.id
+                {filter_query}
                 ORDER BY
-                    DA.activation_date, DA.id;
+                    DA.activation_date, DA.id
             """
 
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')
-        
-    return sql_to_dataframe(sql)
+    
+    return sql_to_dataframe(sql + ';')
         
 def fetch_data_primary(table: str):
     match table:
@@ -202,8 +211,8 @@ def fetch_data_primary(table: str):
 def is_editing():
     ss.done_editing = False
 
-def edit_channel():
-    df_original = fetch_data('Channel').reset_index()
+def edit_channel(filter_query: str = ''):
+    df_original = fetch_data('Channel', filter_query).reset_index()
     
     df_modified: pd.DataFrame = st.data_editor(
         df_original, num_rows='dynamic',
@@ -224,7 +233,7 @@ def edit_channel():
     
     changes = df_modified.merge(
         df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both']
+    ).loc[lambda x : x['_merge'] != 'both'].copy()
 
     changes['Area'] = changes['Area'].fillna('NULL')
     changes.rename(columns={'_merge': 'Difference'}, inplace=True)
@@ -258,8 +267,8 @@ def edit_channel():
 
     return sql
 
-def edit_rce():
-    df_original = fetch_data('Rce').reset_index()
+def edit_rce(filter_query: str = ''):
+    df_original = fetch_data('Rce', filter_query).reset_index()
     df_original['ID'] = df_original['ID'].astype(str)
     
     df_modified: pd.DataFrame = st.data_editor(
@@ -296,7 +305,7 @@ def edit_rce():
     
     changes = df_modified.merge(
         df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both']
+    ).loc[lambda x : x['_merge'] != 'both'].copy()
 
     changes = changes.dropna(subset=['NIK'])
     changes.fillna({
@@ -361,8 +370,8 @@ def edit_rce():
 
     return sql
 
-def edit_agent():
-    df_original = fetch_data('Agent Editing').reset_index()
+def edit_agent(filter_query: str = ''):
+    df_original = fetch_data('Agent Editing', filter_query).reset_index()
     df_original['ID'] = df_original['ID'].astype(str)
     
     df_modified: pd.DataFrame = st.data_editor(
@@ -399,7 +408,7 @@ def edit_agent():
     
     changes = df_modified.merge(
         df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both']
+    ).loc[lambda x : x['_merge'] != 'both'].copy()
 
     changes = changes.dropna(subset=['NIK'])
     changes.fillna({
@@ -465,8 +474,8 @@ def edit_agent():
 
     return sql
 
-def edit_rce_target():
-    df_original = fetch_data('RCE Target Editing').reset_index()
+def edit_rce_target(filter_query: str = ''):
+    df_original = fetch_data('RCE Target Editing', filter_query).reset_index()
     df_original['ID'] = df_original['ID'].astype(str)
     
     month = {
@@ -508,7 +517,7 @@ def edit_rce_target():
     
     changes = df_modified.merge(
         df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both']
+    ).loc[lambda x : x['_merge'] != 'both'].copy()
 
     changes.fillna({
         'ID': 'NULL', 'Target GA CPP': 'NULL',
@@ -561,8 +570,8 @@ def edit_rce_target():
     
     return sql
 
-def edit_agent_target():
-    df_original = fetch_data('Agent Target Editing').reset_index()
+def edit_agent_target(filter_query: str = ''):
+    df_original = fetch_data('Agent Target Editing', filter_query).reset_index()
     df_original['ID'] = df_original['ID'].astype(str)
 
     df_modified: pd.DataFrame = st.data_editor(
@@ -591,7 +600,7 @@ def edit_agent_target():
     
     changes = df_modified.merge(
         df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both']
+    ).loc[lambda x : x['_merge'] != 'both'].copy()
 
     changes.fillna({
         'ID': 'NULL', 'Target GA CPP': 'NULL', 'Target GA Only': 'NULL'
@@ -685,12 +694,12 @@ def activation_upload(data: pd.DataFrame):
     
     return sql
 
-def edit_activation(data: pd.DataFrame = None):
+def edit_activation(data: pd.DataFrame = None, filter_query: str = ''):
     if data is not None:
         return activation_upload(data)
 
     else:
-        df_original = fetch_data('Activation Editing').reset_index()
+        df_original = fetch_data('Activation Editing', filter_query).reset_index()
         df_original['ID'] = df_original['ID'].astype(str)
     
     order_type = ['New Registration', 'Migration', 'Change Postpaid Plan']
@@ -722,7 +731,7 @@ def edit_activation(data: pd.DataFrame = None):
     
     changes = df_modified.merge(
         df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both']
+    ).loc[lambda x : x['_merge'] != 'both'].copy()
 
     changes.fillna({
         'ID': 'NULL', 'Date': 'NULL', 'Product': 'NULL', 'Tenure': 'NULL',
