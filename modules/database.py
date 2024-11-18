@@ -145,7 +145,7 @@ def fetch_data(table: str, filter_query: str = ''):
                 SELECT
                     `AT`.id AS "ID",
                     CONCAT(RT.id, ': ', PR.`name`, ' - ',
-                        MONTHNAME(RT.target_date), ", ", YEAR(RT.target_date)
+                        MONTHNAME(RT.target_date), ', ', YEAR(RT.target_date)
                     ) AS "RCE Target ID",
                     CONCAT(
                         `AT`.agent_id, ': ', PA.nik, ' - ', R.channel_code,
@@ -233,7 +233,7 @@ def fetch_data_primary(table: str):
                 SELECT
                     CONCAT(
                         RT.id, ': ', P.`name`, ' - ', MONTHNAME(RT.target_date),
-                        ", ", YEAR(RT.target_date)
+                        ', ', YEAR(RT.target_date)
                     ) AS "RCE Target ID"
                 FROM RceTarget AS RT
                     INNER JOIN Rce as R ON RT.rce_id = R.id
