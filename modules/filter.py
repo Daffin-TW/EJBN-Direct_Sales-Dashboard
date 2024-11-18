@@ -77,7 +77,9 @@ def filter_edit(table: str):
                 sql.append(f'R.channel_code IN {channel}')
             if active == 'Active':
                 sql.append(f"""(
-                    R.employment_date <= CURDATE() AND
+                    (R.employment_date <= CURDATE() OR
+                        R.employment_date IS NULL
+                    ) AND
                     (R.end_date >= CURDATE() OR R.end_date IS NULL)
                 )""")
             elif active == 'Inactive':
@@ -100,7 +102,7 @@ def filter_edit(table: str):
                 sql.append(f'R.channel_code IN {channel}')
             if active == 'Active':
                 sql.append(f"""(
-                    A.employment_date <= CURDATE() AND
+                    (A.employment_date <= CURDATE() OR A.end_date IS NULL) AND
                     (A.end_date >= CURDATE() OR A.end_date IS NULL)
                 )""")
             elif active == 'Inactive':
@@ -128,8 +130,9 @@ def filter_edit(table: str):
                 )
             if active == 'Active':
                 sql.append(f"""(
-                    R.employment_date <= CURDATE() AND
-                    (R.end_date >= CURDATE() OR R.end_date IS NULL)
+                    (R.employment_date <= CURDATE() OR
+                        R.employment_date IS NULL
+                    ) AND (R.end_date >= CURDATE() OR R.end_date IS NULL)
                 )""")
             elif active == 'Inactive':
                 sql.append(f"""(
@@ -156,7 +159,7 @@ def filter_edit(table: str):
                 )
             if active == 'Active':
                 sql.append(f"""(
-                    A.employment_date <= CURDATE() AND
+                    (A.employment_date <= CURDATE() OR A.end_date IS NULL) AND
                     (A.end_date >= CURDATE() OR A.end_date IS NULL)
                 )""")
             elif active == 'Inactive':

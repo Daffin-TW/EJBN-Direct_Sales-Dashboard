@@ -321,7 +321,7 @@ def edit_rce(filter_query: str = ''):
                 options=fetch_data_primary('Channel'), required=True
             ),
             'Employment Date': st.column_config.DateColumn(
-                required=True, default=datetime.now().date(), format='DD/MM/YYYY'
+                default=datetime.now().date(), format='DD/MM/YYYY'
             ),
             'End Date': st.column_config.DateColumn(
                 format='DD/MM/YYYY'
@@ -424,7 +424,7 @@ def edit_agent(filter_query: str = ''):
                 required=True, default='Nama Agent'
             ),
             'Employment Date': st.column_config.DateColumn(
-                required=True, default=datetime.now().date(), format='DD/MM/YYYY'
+                default=datetime.now().date(), format='DD/MM/YYYY'
             ),
             'End Date': st.column_config.DateColumn(
                 format='DD/MM/YYYY'
