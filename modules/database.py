@@ -72,7 +72,7 @@ def fetch_data(table: str, filter_query: str = ''):
         
         case 'Agent Editing':
             sql = f"""
-                SELECT A.id AS "ID", CONCAT(R.id, ": ", PR.name) AS "RCE",
+                SELECT A.id AS "ID", CONCAT(R.id, ': ', PR.name) AS "RCE",
                     PA.nik AS "NIK", PA.`name` AS "Name", A.employment_date
                     AS "Employment Date", A.end_date AS "End Date" 
                 FROM Person AS PR INNER JOIN Rce AS R
@@ -111,7 +111,7 @@ def fetch_data(table: str, filter_query: str = ''):
                 SELECT
                     RT.id AS "ID", YEAR(RT.target_date) AS "Tahun",
                     MONTHNAME(RT.target_date) AS "Bulan",
-                    CONCAT(R.id, ": ", P.name) AS "RCE", RT.target_ga AS
+                    CONCAT(R.id, ': ', P.name) AS "RCE", RT.target_ga AS
                     "Target GA", RT.target_cpp AS "Target CPP",
                     RT.target_revenue AS "Target Revenue"
                 FROM RceTarget AS RT
@@ -144,11 +144,11 @@ def fetch_data(table: str, filter_query: str = ''):
             sql = f"""
                 SELECT
                     `AT`.id AS "ID",
-                    CONCAT(RT.id, ": ", PR.`name`, " - ",
+                    CONCAT(RT.id, ': ', PR.`name`, ' - ',
                         MONTHNAME(RT.target_date), ", ", YEAR(RT.target_date)
                     ) AS "RCE Target ID",
                     CONCAT(
-                        `AT`.agent_id, ": ", PA.nik, " - ", R.channel_code,
+                        `AT`.agent_id, ': ', PA.nik, ' - ', R.channel_code,
                         " - ", PA.`name`
                     ) AS "Agent",
                     `AT`.target_ga AS "Target GA",
@@ -185,7 +185,7 @@ def fetch_data(table: str, filter_query: str = ''):
                 SELECT
                     DA.id AS "ID", DA.activation_date AS "Date", DA.product AS
                     "Product", DA.tenure AS "Tenure", CONCAT(
-                        A.id, ": ", P.nik, " - ", R.channel_code, " - ", P.`name`
+                        A.id, ': ', P.nik, ' - ', R.channel_code, ' - ', P.`name`
                     ) AS "Agent", DA.order_type AS "Order Type",
                     DA.tactical_regular AS "Tactical Regular",
                     DA.guaranteed_revenue AS "Guaranteed Revenue"
@@ -215,13 +215,13 @@ def fetch_data_primary(table: str):
             return sql_to_dataframe(sql)
         
         case 'Rce Id Name':
-            sql = """SELECT CONCAT(R.id, ": ", P.`name`) AS "RCE" FROM Rce AS R
+            sql = """SELECT CONCAT(R.id, ': ', P.`name`) AS "RCE" FROM Rce AS R
                         INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
             return sql_to_dataframe(sql).index
         
         case 'Agent Id Name':
             sql = """SELECT CONCAT(
-                            A.id, ": ", P.nik, " - ", R.channel_code, " - ", P.`name`
+                            A.id, ': ', P.nik, ' - ', R.channel_code, ' - ', P.`name`
                         ) AS "Agent" FROM Agent AS A
                         INNER JOIN Rce AS R ON A.rce_id = R.id
                         INNER JOIN Person AS P ON A.agent_nik = P.nik
@@ -232,7 +232,7 @@ def fetch_data_primary(table: str):
             sql = """
                 SELECT
                     CONCAT(
-                        RT.id, ": ", P.`name`, " - ", MONTHNAME(RT.target_date),
+                        RT.id, ': ', P.`name`, ' - ', MONTHNAME(RT.target_date),
                         ", ", YEAR(RT.target_date)
                     ) AS "RCE Target ID"
                 FROM RceTarget AS RT
