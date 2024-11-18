@@ -16,9 +16,6 @@ def initialization():
     ss.navigation = '⚙ database edit'
     init_content()
 
-    with st.sidebar:
-        st.markdown('')
-
     if not ss.get('edit_selection', False):
         ss.edit_selection = 'Channel'
 
@@ -107,7 +104,7 @@ initialization()
 
 with st.sidebar:
     st.divider()
-    
+
     st.button(
         '◀ Kembali ke Halaman Semula', 'edit_button',
         use_container_width=True, type='primary'

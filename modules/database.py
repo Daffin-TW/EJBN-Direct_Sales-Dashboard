@@ -22,7 +22,9 @@ def connect_db():
                 host=st.secrets.db_credentials.host,
                 user=st.secrets.db_credentials.username,
                 password=st.secrets.db_credentials.password,
-                database=st.secrets.db_credentials.database
+                database=st.secrets.db_credentials.database,
+                port=st.secrets.db_credentials.port,
+                charset=st.secrets.db_credentials.charset
             )
 
             return db_connection
