@@ -71,6 +71,19 @@ def upload_file():
     )
 
     if upload_file is None:
+        st.markdown("""
+            **Masukkan data dengan kolom berikut:**  
+            - activation_date
+            - Package_Rev
+            - order_type
+            - tenure
+            - dealer_id
+            - nik_sales
+            - salesperson_nm
+            - RCM
+            - Tactical/Regular
+            - Guaranteed Revenue (Mio)
+        """)
         return None
     else:
         ss.done_editing = False
