@@ -1,9 +1,7 @@
 
 from modules import (
-    init_configuration, init_content, init_sidebar, connect_db,
-    edit_channel, edit_rce, edit_agent, edit_rce_target, edit_agent_target,
-    edit_activation, execute_sql_query, preprocessing_daily_activation,
-    filter_edit
+    init_configuration, init_content, init_sidebar, edit_database,
+    execute_sql_query, preprocessing_daily_activation, filter_edit
 )
 from streamlit import session_state as ss
 import streamlit as st
@@ -91,7 +89,7 @@ def upload_file():
         f'sampai dengan **{tanggal[1]}**', icon='⚠'
     )
     
-    sql = edit_activation(df)
+    sql = edit_database('Daily Activation', '', df)
     
     if apply_button(sql, dialog=True):
         st.rerun()
@@ -126,59 +124,8 @@ st.markdown(f'### Tabel {ss.edit_selection}')
 
 col1, col2 = st.columns((1, 5))
 col1.markdown('#### Filter')
-# col2.markdown('#### ')
 
 match ss.edit_selection:
-    case 'Channel':
-        with col1:
-            filter_query = filter_edit(ss.edit_selection)
-        with col2:
-            is_encounter_an_error()
-            sql = edit_channel(filter_query)
-
-            if sql:
-                apply_button(sql)
-
-    case 'RCE':
-        with col1:
-            filter_query = filter_edit(ss.edit_selection)
-        with col2:
-            sql = edit_rce(filter_query)
-            is_encounter_an_error()
-            
-            if sql:
-                apply_button(sql)
-
-    case 'Agent':
-        with col1:
-            filter_query = filter_edit(ss.edit_selection)
-        with col2:
-            is_encounter_an_error()
-            sql = edit_agent(filter_query)
-            
-            if sql:
-                apply_button(sql)
-
-    case 'RCE Target':
-        with col1:
-            filter_query = filter_edit(ss.edit_selection)
-        with col2:
-            is_encounter_an_error()
-            sql = edit_rce_target(filter_query)
-            
-            if sql:
-                apply_button(sql)
-
-    case 'Agent Target':
-        with col1:
-            filter_query = filter_edit(ss.edit_selection)
-        with col2:
-            is_encounter_an_error()
-            sql = edit_agent_target(filter_query)
-            
-            if sql:
-                apply_button(sql)
-
     case 'Daily Activation':        
         with col1:
             filter_query = filter_edit(ss.edit_selection)
@@ -191,10 +138,17 @@ match ss.edit_selection:
 
         with col2:
             is_encounter_an_error()
-            sql = edit_activation(filter_query=filter_query)
+            sql = edit_database(ss.edit_selection, filter_query)
             
             if sql:
                 apply_button(sql)
     
     case _:
-        pass
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
+        with col2:
+            is_encounter_an_error()
+            sql = edit_database(ss.edit_selection, filter_query)
+            
+            if sql:
+                apply_button(sql)

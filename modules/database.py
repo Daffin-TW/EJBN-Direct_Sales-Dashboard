@@ -52,7 +52,7 @@ def sql_to_dataframe(sql: str):
     with st.spinner('Sedang memuat data, mohon ditunggu...'):
         db_conn = connect_db()
         df = pd.read_sql(sql, db_conn)
-        db_conn.close()
+        # db_conn.close()
 
     return df.set_index(df.columns[0])
 
@@ -249,444 +249,6 @@ def fetch_data_primary(table: str):
 def is_editing():
     ss.done_editing = False
 
-def edit_channel(filter_query: str = ''):
-    df_original = fetch_data('Channel', filter_query).reset_index()
-    
-    df_modified: pd.DataFrame = st.data_editor(
-        df_original, num_rows='dynamic',
-        use_container_width=True, on_change=is_editing,
-        column_config={
-            'Code': st.column_config.TextColumn(
-                default='DS00', max_chars=5,
-                required=True, validate='[A-Za-z]+[0-9]+'
-            )
-        }
-    )
-
-    if any(df_modified['Code'].duplicated()):
-        ss.invalid_edit = True
-        st.error('Kode tidak boleh duplikat', icon='❗')
-    else:
-        ss.invalid_edit = False
-    
-    changes = df_modified.merge(
-        df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both'].copy()
-
-    changes['Area'] = changes['Area'].fillna('NULL')
-    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
-    changes.drop_duplicates(subset=['Code', 'Difference'], inplace=True)
-    changes['Update'] = changes.duplicated(subset=['Code'], keep=False)
-    
-    insert_update = changes[
-        changes['Difference'] == 'left_only'
-    ][['Code', 'Area']].values
-    insert_update = tuple(map(tuple, insert_update))
-    insert_update = ', '.join([str(i) for i in insert_update])
-
-    delete = changes[
-        (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False)
-    ]['Code'].values
-    delete = ', '.join([f"'{i}'" for i in delete])
-
-    sql = []
-
-    if insert_update:
-        sql.append(f"""
-            INSERT INTO `Channel` VALUES {insert_update} AS new
-                ON DUPLICATE KEY UPDATE area = new.area;
-        """)
-
-    if delete:
-        sql.append(f"""
-            DELETE FROM `Channel` WHERE `Code` IN ({delete});
-        """)
-
-    return sql
-
-def edit_rce(filter_query: str = ''):
-    df_original = fetch_data('Rce', filter_query).reset_index()
-    df_original['ID'] = df_original['ID'].astype(str)
-    
-    df_modified: pd.DataFrame = st.data_editor(
-        df_original, num_rows='dynamic',
-        use_container_width=True, on_change=is_editing,
-        column_config={
-            'ID': st.column_config.TextColumn(disabled=True, default='auto'),
-            'NIK': st.column_config.TextColumn(
-                default=None, max_chars=12,
-                required=True, validate='[A-Za-z0-9]+'),
-            'Name': st.column_config.TextColumn(
-                required=True, default='Nama RCE'
-            ),
-            'Channel': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Channel').index, required=True
-            ),
-            'Employment Date': st.column_config.DateColumn(
-                default=datetime.now().date(), format='DD/MM/YYYY'
-            ),
-            'End Date': st.column_config.DateColumn(
-                format='DD/MM/YYYY'
-            )
-        }
-    )
-
-    df_modified['ID'] = df_modified['ID'].replace('auto', None)
-    duplicates_check = df_modified[df_modified['NIK'].duplicated(keep=False)]
-
-    if not all(duplicates_check.duplicated(['NIK', 'Name'], keep=False)):
-        ss.invalid_edit = True
-        st.error('NIK dan Nama harus konsisten', icon='❗')
-    else:
-        ss.invalid_edit = False
-    
-    changes = df_modified.merge(
-        df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both'].copy()
-
-    changes = changes.dropna(subset=['NIK'])
-    changes.fillna({
-        'ID': 'NULL', 'Employment Date': 'NULL', 'End Date': 'NULL'
-    }, inplace=True)
-    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
-    changes['Update'] = (
-        (changes.duplicated(subset=['ID', 'NIK'], keep=False)) &
-        (changes['Difference'] == 'right_only')
-    )
-    changes['Employment Date'] = changes['Employment Date'].astype(str)
-    changes['End Date'] = changes['End Date'].astype(str)
-
-    insert_update_person = changes[
-        changes['Difference'] == 'left_only'
-    ][[
-        'NIK', 'Name'
-    ]].values
-    insert_update_person = tuple(map(tuple, insert_update_person))
-    insert_update_person = ', '.join([str(i) for i in insert_update_person])
-    insert_update_person = insert_update_person.replace("'NULL'", 'NULL')
-
-    insert_update_rce = changes[
-        changes['Difference'] == 'left_only'
-    ][[
-        'ID', 'NIK', 'Channel',
-        'Employment Date', 'End Date'
-    ]].values
-    insert_update_rce = tuple(map(tuple, insert_update_rce))
-    insert_update_rce = ', '.join([str(i) for i in insert_update_rce])
-    insert_update_rce = insert_update_rce.replace("'NULL'", 'NULL')
-
-    delete_rce = changes[
-        (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False)
-    ]['ID'].values
-    delete_rce = ', '.join([f"'{i}'" for i in delete_rce])
-
-    sql = []
-
-    if insert_update_person:
-        sql.append(f"""
-            INSERT INTO Person VALUES {insert_update_person} AS new
-                ON DUPLICATE KEY UPDATE
-                `name` = new.`name`;
-        """)
-        
-    if insert_update_rce:
-        sql.append(f"""
-            INSERT INTO Rce VALUES {insert_update_rce} AS new
-                ON DUPLICATE KEY UPDATE
-                rce_nik = new.rce_nik,
-                channel_code = new.channel_code,
-                employment_date = new.employment_date,
-                end_date = new.end_date;
-        """)
-
-    if delete_rce:
-        sql.append(f"""
-            DELETE FROM Rce WHERE `id` IN ({delete_rce});
-        """)
-
-    return sql
-
-def edit_agent(filter_query: str = ''):
-    df_original = fetch_data('Agent Editing', filter_query).reset_index()
-    df_original['ID'] = df_original['ID'].astype(str)
-    
-    df_modified: pd.DataFrame = st.data_editor(
-        df_original, num_rows='dynamic',
-        use_container_width=True, on_change=is_editing,
-        column_config={
-            'ID': st.column_config.TextColumn(disabled=True, default='auto'),
-            'RCE': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Rce Id Name').index, required=True
-            ),
-            'NIK': st.column_config.TextColumn(
-                default=None, max_chars=12,
-                required=True, validate='[A-Za-z0-9]+'),
-            'Name': st.column_config.TextColumn(
-                required=True, default='Nama Agent'
-            ),
-            'Employment Date': st.column_config.DateColumn(
-                default=datetime.now().date(), format='DD/MM/YYYY'
-            ),
-            'End Date': st.column_config.DateColumn(
-                format='DD/MM/YYYY'
-            )
-        }
-    )
-
-    df_modified['ID'] = df_modified['ID'].replace('auto', None)
-    duplicates_check = df_modified[df_modified['NIK'].duplicated(keep=False)]
-
-    if not all(duplicates_check.duplicated(['NIK', 'Name'], keep=False)):
-        ss.invalid_edit = True
-        st.error('NIK dan Nama harus konsisten', icon='❗')
-    else:
-        ss.invalid_edit = False
-    
-    changes = df_modified.merge(
-        df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both'].copy()
-
-    changes = changes.dropna(subset=['NIK'])
-    changes.fillna({
-        'ID': 'NULL', 'Employment Date': 'NULL', 'End Date': 'NULL'
-    }, inplace=True)
-    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
-    changes['Update'] = (
-        (changes.duplicated(subset=['ID', 'NIK'], keep=False)) &
-        (changes['Difference'] == 'right_only')
-    )
-    changes['Employment Date'] = changes['Employment Date'].astype(str)
-    changes['End Date'] = changes['End Date'].astype(str)
-    changes['RCE'] = changes['RCE'].str.split(':').str[0]
-
-    insert_update_person = changes[
-        changes['Difference'] == 'left_only'
-    ][[
-        'NIK', 'Name'
-    ]].values
-    insert_update_person = tuple(map(tuple, insert_update_person))
-    insert_update_person = ', '.join([str(i) for i in insert_update_person])
-    insert_update_person = insert_update_person.replace("'NULL'", 'NULL')
-
-    insert_update_agent = changes[
-        changes['Difference'] == 'left_only'
-    ][[
-        'ID', 'NIK', 'RCE',
-        'Employment Date', 'End Date'
-    ]].values
-    insert_update_agent = tuple(map(tuple, insert_update_agent))
-    insert_update_agent = ', '.join([str(i) for i in insert_update_agent])
-    insert_update_agent = insert_update_agent.replace("'NULL'", 'NULL')
-
-    delete_agent = changes[
-        (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False)
-    ]['ID'].values
-    delete_agent = ', '.join([f"'{i}'" for i in delete_agent])
-
-    sql = []
-
-    if insert_update_person:
-        sql.append(f"""
-            INSERT INTO Person VALUES {insert_update_person} AS new
-                ON DUPLICATE KEY UPDATE
-                `name` = new.`name`;
-        """)
-        
-    if insert_update_agent:
-        sql.append(f"""
-            INSERT INTO Agent VALUES {insert_update_agent} AS new
-                ON DUPLICATE KEY UPDATE
-                agent_nik = new.agent_nik,
-                rce_id = new.rce_id,
-                employment_date = new.employment_date,
-                end_date = new.end_date;
-        """)
-
-    if delete_agent:
-        sql.append(f"""
-            DELETE FROM Agent WHERE `id` IN ({delete_agent});
-        """)
-
-    return sql
-
-def edit_rce_target(filter_query: str = ''):
-    df_original = fetch_data('RCE Target Editing', filter_query).reset_index()
-    df_original['ID'] = df_original['ID'].astype(str)
-    
-    month = {
-        1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May',
-        6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October',
-        11: 'November', 12: 'December'
-    }
-    month_number = {j: i for i, j in month.items()}
-
-    df_modified: pd.DataFrame = st.data_editor(
-        df_original, num_rows='dynamic',
-        use_container_width=True, on_change=is_editing,
-        column_config={
-            'ID': st.column_config.TextColumn(disabled=True, default='auto'),
-            'RCE': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Rce Id Name').index, required=True,
-            ),
-            'Tahun': st.column_config.NumberColumn(
-                required=True, default=datetime.now().year,
-                min_value=2000, max_value=9999, step=1, format='%i'
-            ),
-            'Bulan': st.column_config.SelectboxColumn(
-                required=True, options=month.values(),
-                default=month[datetime.now().month]
-            ),
-            'Target GA': st.column_config.NumberColumn(),
-            'Target CPP': st.column_config.NumberColumn(),
-            'Target Revenue': st.column_config.NumberColumn()
-        }
-    )
-
-    df_modified['ID'] = df_modified['ID'].replace('auto', None)
-
-    if any(df_modified.duplicated(['Tahun', 'Bulan', 'RCE'], keep=False)):
-        ss.invalid_edit = True
-        st.error('Terdapat tanggal target yang sama untuk satu RCE', icon='❗')
-    else:
-        ss.invalid_edit = False
-    
-    changes = df_modified.merge(
-        df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both'].copy()
-
-    changes.fillna({
-        'ID': 'NULL', 'Target GA': 'NULL',
-        'Target CPP': 'NULL', 'Target Revenue': 'NULL'
-    }, inplace=True)
-    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
-    changes['Update'] = (
-        (changes.duplicated(subset=['ID'], keep=False)) &
-        (changes['Difference'] == 'right_only')
-    )
-    changes['Target Date'] = (
-        changes['Tahun'].astype(int).astype(str) + '-' +
-        changes['Bulan'].map(month_number).astype(str) + '-1'
-    )
-    changes['RCE'] = changes['RCE'].str.split(':').str[0]
-
-    insert_update_target = changes[
-        changes['Difference'] == 'left_only'
-    ][[
-        'ID', 'Target Date', 'RCE', 'Target GA',
-        'Target CPP', 'Target Revenue'
-    ]].values
-    insert_update_target = tuple(map(tuple, insert_update_target))
-    insert_update_target = ', '.join([str(i) for i in insert_update_target])
-    insert_update_target = insert_update_target.replace("'NULL'", 'NULL')
-
-    delete_target = changes[
-        (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False)
-    ]['ID'].values
-    delete_target = ', '.join([f"'{i}'" for i in delete_target])
-
-    sql = []
-
-    if insert_update_target:
-        sql.append(f"""
-            INSERT INTO RceTarget VALUES {insert_update_target} AS new
-                ON DUPLICATE KEY UPDATE
-                target_date = new.target_date,
-                rce_id = new.rce_id,
-                target_ga = new.target_ga,
-                target_cpp = new.target_cpp,
-                target_revenue = new.target_revenue;
-        """)
-
-    if delete_target:
-        sql.append(f"""
-            DELETE FROM RceTarget WHERE `id` IN ({delete_target});
-        """)
-    
-    return sql
-
-def edit_agent_target(filter_query: str = ''):
-    df_original = fetch_data('Agent Target Editing', filter_query).reset_index()
-    df_original['ID'] = df_original['ID'].astype(str)
-
-    df_modified: pd.DataFrame = st.data_editor(
-        df_original, num_rows='dynamic',
-        use_container_width=True, on_change=is_editing,
-        column_config={
-            'ID': st.column_config.TextColumn(disabled=True, default='auto'),
-            'RCE Target ID': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Rce Target Id Name').index,
-                required=True,
-            ),
-            'Agent': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Agent Id Name').index,
-                required=True,
-            ),
-            'Target GA': st.column_config.NumberColumn(),
-            'Target CPP': st.column_config.NumberColumn()
-        }
-    )
-
-    df_modified['ID'] = df_modified['ID'].replace('auto', None)
-
-    if any(df_modified.duplicated(['RCE Target ID', 'Agent'], keep=False)):
-        ss.invalid_edit = True
-        st.error('Terdapat tanggal target yang sama untuk satu Agent', icon='❗')
-    else:
-        ss.invalid_edit = False
-    
-    changes = df_modified.merge(
-        df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both'].copy()
-
-    changes.fillna({
-        'ID': 'NULL', 'Target GA': 'NULL', 'Target CPP': 'NULL'
-    }, inplace=True)
-    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
-    changes['Update'] = (
-        (changes.duplicated(subset=['ID'], keep=False)) &
-        (changes['Difference'] == 'right_only')
-    )
-    changes['RCE Target ID'] = changes['RCE Target ID'].str.split(':').str[0]
-    changes['Agent'] = changes['Agent'].str.split(':').str[0]
-
-    insert_update_target = changes[
-        changes['Difference'] == 'left_only'
-    ][[
-        'ID', 'RCE Target ID', 'Agent', 'Target GA', 'Target CPP'
-    ]].values
-    insert_update_target = tuple(map(tuple, insert_update_target))
-    insert_update_target = ', '.join([str(i) for i in insert_update_target])
-    insert_update_target = insert_update_target.replace("'NULL'", 'NULL')
-
-    delete_target = changes[
-        (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False)
-    ]['ID'].values
-    delete_target = ', '.join([f"'{i}'" for i in delete_target])
-
-    sql = []
-
-    if insert_update_target:
-        sql.append(f"""
-            INSERT INTO AgentTarget VALUES {insert_update_target} AS new
-                ON DUPLICATE KEY UPDATE
-                rce_target_id = new.rce_target_id,
-                agent_id = new.agent_id,
-                target_ga = new.target_ga,
-                target_cpp = new.target_cpp;
-        """)
-
-    if delete_target:
-        sql.append(f"""
-            DELETE FROM AgentTarget WHERE `id` IN ({delete_target});
-        """)
-    
-    return sql
-
 def activation_upload(data: pd.DataFrame):
     changes = data.copy()
     changes.fillna({
@@ -695,7 +257,7 @@ def activation_upload(data: pd.DataFrame):
         'Guaranteed Revenue': 'NULL'
     }, inplace=True)
 
-    delete_activation = [changes['Date'].min(), changes['Date'].max()]
+    delete_act = [changes['Date'].min(), changes['Date'].max()]
 
     changes['Agent'] = changes['Agent'].str.split(':').str[0]
     changes['Date'] = changes['Date'].astype(str)
@@ -710,11 +272,11 @@ def activation_upload(data: pd.DataFrame):
 
     sql = []
 
-    if delete_activation:
+    if delete_act:
         sql.append(f"""
             DELETE FROM DailyActivation
-            WHERE activation_date BETWEEN '{delete_activation[0]}' AND 
-            '{delete_activation[1]}';
+            WHERE activation_date BETWEEN '{delete_act[0]}' AND 
+            '{delete_act[1]}';
         """)
 
     if insert_activation:
@@ -734,94 +296,562 @@ def activation_upload(data: pd.DataFrame):
     
     return sql
 
-def edit_activation(data: pd.DataFrame = None, filter_query: str = ''):
-    if data is not None:
-        return activation_upload(data)
-
-    else:
-        df_original = fetch_data('Activation Editing', filter_query).reset_index()
-        df_original['ID'] = df_original['ID'].astype(str)
+def edit_database(table: str, filter_query: str = '', data: pd.DataFrame = None):
+    match table:
+        case 'Channel':
+            df_original = fetch_data('Channel', filter_query).reset_index()
     
-    order_type = ['New Registration', 'Migration', 'Change Postpaid Plan']
-    tactical_regular = ['Tactical', 'Regular']
+            df_modified: pd.DataFrame = st.data_editor(
+                df_original, num_rows='dynamic',
+                use_container_width=True, on_change=is_editing,
+                column_config={
+                    'Code': st.column_config.TextColumn(
+                        default='DS00', max_chars=5,
+                        required=True, validate='[A-Za-z]+[0-9]+'
+                    )
+                }
+            )
 
-    df_modified: pd.DataFrame = st.data_editor(
-        df_original, num_rows='dynamic',
-        use_container_width=True, on_change=is_editing,
-        column_config={
-            'ID': st.column_config.TextColumn(disabled=True, default='auto'),
-            'Date': st.column_config.DateColumn(
-                required=True, default=datetime.now().date(), format='DD/MM/YYYY'
-            ),
-            'Tenure': st.column_config.NumberColumn(min_value=1, step=1),
-            'Agent': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Agent Id Name').index, required=True,
-            ),
-            'Order Type': st.column_config.SelectboxColumn(
-                options=order_type, default=order_type[0]
-            ),
-            'Tactical Regular': st.column_config.SelectboxColumn(
-                options=tactical_regular, default=tactical_regular[0]
-            ),
-            'Guaranteed Revenue': st.column_config.NumberColumn(min_value=0)
-        }
-    )
+            if any(df_modified['Code'].duplicated()):
+                ss.invalid_edit = True
+                st.error('Kode tidak boleh duplikat', icon='❗')
+            else:
+                ss.invalid_edit = False
+            
+            changes = df_modified.merge(
+                df_original, indicator = True, how='outer',
+            ).loc[lambda x : x['_merge'] != 'both'].copy()
 
-    df_modified['ID'] = df_modified['ID'].replace('auto', None)
-    
-    changes = df_modified.merge(
-        df_original, indicator = True, how='outer',
-    ).loc[lambda x : x['_merge'] != 'both'].copy()
+            changes['Area'] = changes['Area'].fillna('NULL')
+            changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+            changes.drop_duplicates(subset=['Code', 'Difference'], inplace=True)
+            changes['Update'] = changes.duplicated(subset=['Code'], keep=False)
+            
+            insert_update = changes[
+                changes['Difference'] == 'left_only'
+            ][['Code', 'Area']].values
+            insert_update = tuple(map(tuple, insert_update))
+            insert_update = ', '.join([str(i) for i in insert_update])
 
-    changes.fillna({
-        'ID': 'NULL', 'Date': 'NULL', 'Product': 'NULL', 'Tenure': 'NULL',
-        'Order Type': 'NULL', 'Tactical Regular': 'NULL',
-        'Guaranteed Revenue': 'NULL'
-    }, inplace=True)
-    changes.rename(columns={'_merge': 'Difference'}, inplace=True)
-    changes['Update'] = (
-        (changes.duplicated(subset=['ID'], keep=False)) &
-        (changes['Difference'] == 'right_only')
-    )
-    changes['Agent'] = changes['Agent'].str.split(':').str[0]
-    changes['Date'] = changes['Date'].astype(str)
+            delete = changes[
+                (changes['Difference'] == 'right_only') &
+                (changes['Update'] == False)
+            ]['Code'].values
+            delete = ', '.join([f"'{i}'" for i in delete])
 
-    insert_update_activation = changes[
-        changes['Difference'] == 'left_only'
-    ][[
-        'ID', 'Date', 'Product', 'Tenure', 'Agent', 'Order Type',
-        'Tactical Regular', 'Guaranteed Revenue'
-    ]].values
-    insert_update_activation = tuple(map(tuple, insert_update_activation))
-    insert_update_activation = ', '.join([str(i) for i in insert_update_activation])
-    insert_update_activation = insert_update_activation.replace("'NULL'", 'NULL')
+            sql = []
 
-    delete_activation = changes[
-        (changes['Difference'] == 'right_only') &
-        (changes['Update'] == False)
-    ]['ID'].values
-    delete_activation = ', '.join([f"'{i}'" for i in delete_activation])
+            if insert_update:
+                sql.append(f"""
+                    INSERT INTO `Channel` VALUES {insert_update} AS new
+                        ON DUPLICATE KEY UPDATE area = new.area;
+                """)
 
-    sql = []
+            if delete:
+                sql.append(f"""
+                    DELETE FROM `Channel` WHERE `Code` IN ({delete});
+                """)
 
-    if insert_update_activation:
-        sql.append(f"""
-            INSERT INTO DailyActivation VALUES {insert_update_activation} AS new
-                ON DUPLICATE KEY UPDATE
-                activation_date = new.activation_date,
-                tenure = new.tenure,
-                agent_id = new.agent_id,
-                order_type = new.order_type,
-                tactical_regular = new.tactical_regular,
-                guaranteed_revenue = new.guaranteed_revenue;
-        """)
+            return sql
+        
+        case 'RCE':
+            df_original = fetch_data('Rce', filter_query).reset_index()
+            df_original['ID'] = df_original['ID'].astype(str)
+            
+            df_modified: pd.DataFrame = st.data_editor(
+                df_original, num_rows='dynamic',
+                use_container_width=True, on_change=is_editing,
+                column_config={
+                    'ID': st.column_config.TextColumn(
+                        disabled=True, default='auto'
+                    ),
+                    'NIK': st.column_config.TextColumn(
+                        default=None, max_chars=12,
+                        required=True, validate='[A-Za-z0-9]+'),
+                    'Name': st.column_config.TextColumn(
+                        required=True, default='Nama RCE'
+                    ),
+                    'Channel': st.column_config.SelectboxColumn(
+                        options=fetch_data_primary('Channel').index,
+                        required=True
+                    ),
+                    'Employment Date': st.column_config.DateColumn(
+                        default=datetime.now().date(), format='DD/MM/YYYY'
+                    ),
+                    'End Date': st.column_config.DateColumn(
+                        format='DD/MM/YYYY'
+                    )
+                }
+            )
 
-    if delete_activation:
-        sql.append(f"""
-            DELETE FROM DailyActivation WHERE `id` IN ({delete_activation});
-        """)
-    
-    return sql
+            df_modified['ID'] = df_modified['ID'].replace('auto', None)
+            dup_check = df_modified[df_modified['NIK'].duplicated(keep=False)]
+
+            if not all(dup_check.duplicated(['NIK', 'Name'], keep=False)):
+                ss.invalid_edit = True
+                st.error('NIK dan Nama harus konsisten', icon='❗')
+            else:
+                ss.invalid_edit = False
+            
+            changes = df_modified.merge(
+                df_original, indicator = True, how='outer',
+            ).loc[lambda x : x['_merge'] != 'both'].copy()
+
+            changes = changes.dropna(subset=['NIK'])
+            changes.fillna({
+                'ID': 'NULL', 'Employment Date': 'NULL', 'End Date': 'NULL'
+            }, inplace=True)
+            changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+            changes['Update'] = (
+                (changes.duplicated(subset=['ID', 'NIK'], keep=False)) &
+                (changes['Difference'] == 'right_only')
+            )
+            changes['Employment Date'] = changes['Employment Date'].astype(str)
+            changes['End Date'] = changes['End Date'].astype(str)
+
+            insert_update_p = changes[
+                changes['Difference'] == 'left_only'
+            ][[
+                'NIK', 'Name'
+            ]].values
+            insert_update_p = tuple(map(tuple, insert_update_p))
+            insert_update_p = ', '.join([str(i) for i in insert_update_p])
+            insert_update_p = insert_update_p.replace("'NULL'", 'NULL')
+
+            insert_update_rce = changes[
+                changes['Difference'] == 'left_only'
+            ][[
+                'ID', 'NIK', 'Channel',
+                'Employment Date', 'End Date'
+            ]].values
+            insert_update_rce = tuple(map(tuple, insert_update_rce))
+            insert_update_rce = ', '.join([str(i) for i in insert_update_rce])
+            insert_update_rce = insert_update_rce.replace("'NULL'", 'NULL')
+
+            delete_rce = changes[
+                (changes['Difference'] == 'right_only') &
+                (changes['Update'] == False)
+            ]['ID'].values
+            delete_rce = ', '.join([f"'{i}'" for i in delete_rce])
+
+            sql = []
+
+            if insert_update_p:
+                sql.append(f"""
+                    INSERT INTO Person VALUES {insert_update_p} AS new
+                        ON DUPLICATE KEY UPDATE
+                        `name` = new.`name`;
+                """)
+                
+            if insert_update_rce:
+                sql.append(f"""
+                    INSERT INTO Rce VALUES {insert_update_rce} AS new
+                        ON DUPLICATE KEY UPDATE
+                        rce_nik = new.rce_nik,
+                        channel_code = new.channel_code,
+                        employment_date = new.employment_date,
+                        end_date = new.end_date;
+                """)
+
+            if delete_rce:
+                sql.append(f"""
+                    DELETE FROM Rce WHERE `id` IN ({delete_rce});
+                """)
+
+            return sql    
+
+        case 'Agent':
+            df_original = fetch_data('Agent Editing', filter_query).reset_index()
+            df_original['ID'] = df_original['ID'].astype(str)
+            
+            df_modified: pd.DataFrame = st.data_editor(
+                df_original, num_rows='dynamic',
+                use_container_width=True, on_change=is_editing,
+                column_config={
+                    'ID': st.column_config.TextColumn(
+                        disabled=True, default='auto'
+                    ),
+                    'RCE': st.column_config.SelectboxColumn(
+                        options=fetch_data_primary('Rce Id Name').index,
+                        required=True
+                    ),
+                    'NIK': st.column_config.TextColumn(
+                        default=None, max_chars=12,
+                        required=True, validate='[A-Za-z0-9]+'),
+                    'Name': st.column_config.TextColumn(
+                        required=True, default='Nama Agent'
+                    ),
+                    'Employment Date': st.column_config.DateColumn(
+                        default=datetime.now().date(), format='DD/MM/YYYY'
+                    ),
+                    'End Date': st.column_config.DateColumn(
+                        format='DD/MM/YYYY'
+                    )
+                }
+            )
+
+            df_modified['ID'] = df_modified['ID'].replace('auto', None)
+            dup_check = df_modified[df_modified['NIK'].duplicated(keep=False)]
+
+            if not all(dup_check.duplicated(['NIK', 'Name'], keep=False)):
+                ss.invalid_edit = True
+                st.error('NIK dan Nama harus konsisten', icon='❗')
+            else:
+                ss.invalid_edit = False
+            
+            changes = df_modified.merge(
+                df_original, indicator = True, how='outer',
+            ).loc[lambda x : x['_merge'] != 'both'].copy()
+
+            changes = changes.dropna(subset=['NIK'])
+            changes.fillna({
+                'ID': 'NULL', 'Employment Date': 'NULL', 'End Date': 'NULL'
+            }, inplace=True)
+            changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+            changes['Update'] = (
+                (changes.duplicated(subset=['ID', 'NIK'], keep=False)) &
+                (changes['Difference'] == 'right_only')
+            )
+            changes['Employment Date'] = changes['Employment Date'].astype(str)
+            changes['End Date'] = changes['End Date'].astype(str)
+            changes['RCE'] = changes['RCE'].str.split(':').str[0]
+
+            insert_update_p = changes[
+                changes['Difference'] == 'left_only'
+            ][[
+                'NIK', 'Name'
+            ]].values
+            insert_update_p = tuple(map(tuple, insert_update_p))
+            insert_update_p = ', '.join([str(i) for i in insert_update_p])
+            insert_update_p = insert_update_p.replace("'NULL'", 'NULL')
+
+            insert_update_ag = changes[
+                changes['Difference'] == 'left_only'
+            ][[
+                'ID', 'NIK', 'RCE',
+                'Employment Date', 'End Date'
+            ]].values
+            insert_update_ag = tuple(map(tuple, insert_update_ag))
+            insert_update_ag = ', '.join([str(i) for i in insert_update_ag])
+            insert_update_ag = insert_update_ag.replace("'NULL'", 'NULL')
+
+            delete_agent = changes[
+                (changes['Difference'] == 'right_only') &
+                (changes['Update'] == False)
+            ]['ID'].values
+            delete_agent = ', '.join([f"'{i}'" for i in delete_agent])
+
+            sql = []
+
+            if insert_update_p:
+                sql.append(f"""
+                    INSERT INTO Person VALUES {insert_update_p} AS new
+                        ON DUPLICATE KEY UPDATE
+                        `name` = new.`name`;
+                """)
+                
+            if insert_update_ag:
+                sql.append(f"""
+                    INSERT INTO Agent VALUES {insert_update_ag} AS new
+                        ON DUPLICATE KEY UPDATE
+                        agent_nik = new.agent_nik,
+                        rce_id = new.rce_id,
+                        employment_date = new.employment_date,
+                        end_date = new.end_date;
+                """)
+
+            if delete_agent:
+                sql.append(f"""
+                    DELETE FROM Agent WHERE `id` IN ({delete_agent});
+                """)
+
+            return sql
+
+        case 'RCE Target':
+            df_original = fetch_data(
+                'RCE Target Editing', filter_query
+            ).reset_index()
+            df_original['ID'] = df_original['ID'].astype(str)
+            
+            month = {
+                1: 'January', 2: 'February', 3: 'March', 4: 'April', 5: 'May',
+                6: 'June', 7: 'July', 8: 'August', 9: 'September', 10: 'October',
+                11: 'November', 12: 'December'
+            }
+            month_number = {j: i for i, j in month.items()}
+
+            df_modified: pd.DataFrame = st.data_editor(
+                df_original, num_rows='dynamic',
+                use_container_width=True, on_change=is_editing,
+                column_config={
+                    'ID': st.column_config.TextColumn(
+                        disabled=True, default='auto'
+                    ),
+                    'RCE': st.column_config.SelectboxColumn(
+                        options=fetch_data_primary('Rce Id Name').index,
+                        required=True,
+                    ),
+                    'Tahun': st.column_config.NumberColumn(
+                        required=True, default=datetime.now().year,
+                        min_value=2000, max_value=9999, step=1, format='%i'
+                    ),
+                    'Bulan': st.column_config.SelectboxColumn(
+                        required=True, options=month.values(),
+                        default=month[datetime.now().month]
+                    ),
+                    'Target GA': st.column_config.NumberColumn(),
+                    'Target CPP': st.column_config.NumberColumn(),
+                    'Target Revenue': st.column_config.NumberColumn()
+                }
+            )
+
+            df_modified['ID'] = df_modified['ID'].replace('auto', None)
+
+            if any(df_modified.duplicated(['Tahun', 'Bulan', 'RCE'], keep=False)):
+                ss.invalid_edit = True
+                st.error(
+                    'Terdapat tanggal target yang sama untuk satu RCE', icon='❗'
+                )
+            else:
+                ss.invalid_edit = False
+            
+            changes = df_modified.merge(
+                df_original, indicator = True, how='outer',
+            ).loc[lambda x : x['_merge'] != 'both'].copy()
+
+            changes.fillna({
+                'ID': 'NULL', 'Target GA': 'NULL',
+                'Target CPP': 'NULL', 'Target Revenue': 'NULL'
+            }, inplace=True)
+            changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+            changes['Update'] = (
+                (changes.duplicated(subset=['ID'], keep=False)) &
+                (changes['Difference'] == 'right_only')
+            )
+            changes['Target Date'] = (
+                changes['Tahun'].astype(int).astype(str) + '-' +
+                changes['Bulan'].map(month_number).astype(str) + '-1'
+            )
+            changes['RCE'] = changes['RCE'].str.split(':').str[0]
+
+            insert_update_t = changes[
+                changes['Difference'] == 'left_only'
+            ][[
+                'ID', 'Target Date', 'RCE', 'Target GA',
+                'Target CPP', 'Target Revenue'
+            ]].values
+            insert_update_t = tuple(map(tuple, insert_update_t))
+            insert_update_t = ', '.join([str(i) for i in insert_update_t])
+            insert_update_t = insert_update_t.replace("'NULL'", 'NULL')
+
+            delete_t = changes[
+                (changes['Difference'] == 'right_only') &
+                (changes['Update'] == False)
+            ]['ID'].values
+            delete_t = ', '.join([f"'{i}'" for i in delete_t])
+
+            sql = []
+
+            if insert_update_t:
+                sql.append(f"""
+                    INSERT INTO RceTarget VALUES {insert_update_t} AS new
+                        ON DUPLICATE KEY UPDATE
+                        target_date = new.target_date,
+                        rce_id = new.rce_id,
+                        target_ga = new.target_ga,
+                        target_cpp = new.target_cpp,
+                        target_revenue = new.target_revenue;
+                """)
+
+            if delete_t:
+                sql.append(f"""
+                    DELETE FROM RceTarget WHERE `id` IN ({delete_t});
+                """)
+            
+            return sql
+
+        case 'Agent Target':
+            df_original = fetch_data(
+                'Agent Target Editing', filter_query
+            ).reset_index()
+            df_original['ID'] = df_original['ID'].astype(str)
+
+            df_modified: pd.DataFrame = st.data_editor(
+                df_original, num_rows='dynamic',
+                use_container_width=True, on_change=is_editing,
+                column_config={
+                    'ID': st.column_config.TextColumn(
+                        disabled=True, default='auto'
+                    ),
+                    'RCE Target ID': st.column_config.SelectboxColumn(
+                        options=fetch_data_primary('Rce Target Id Name').index,
+                        required=True,
+                    ),
+                    'Agent': st.column_config.SelectboxColumn(
+                        options=fetch_data_primary('Agent Id Name').index,
+                        required=True,
+                    ),
+                    'Target GA': st.column_config.NumberColumn(),
+                    'Target CPP': st.column_config.NumberColumn()
+                }
+            )
+
+            df_modified['ID'] = df_modified['ID'].replace('auto', None)
+
+            if any(df_modified.duplicated(['RCE Target ID', 'Agent'], keep=False)):
+                ss.invalid_edit = True
+                st.error(
+                    'Terdapat tanggal target yang sama untuk satu Agent',
+                    icon='❗'
+                )
+            else:
+                ss.invalid_edit = False
+            
+            changes = df_modified.merge(
+                df_original, indicator = True, how='outer',
+            ).loc[lambda x : x['_merge'] != 'both'].copy()
+
+            changes.fillna({
+                'ID': 'NULL', 'Target GA': 'NULL', 'Target CPP': 'NULL'
+            }, inplace=True)
+            changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+            changes['Update'] = (
+                (changes.duplicated(subset=['ID'], keep=False)) &
+                (changes['Difference'] == 'right_only')
+            )
+            changes['RCE Target ID'] = changes['RCE Target ID'].str.split(':').str[0]
+            changes['Agent'] = changes['Agent'].str.split(':').str[0]
+
+            insert_update_t = changes[
+                changes['Difference'] == 'left_only'
+            ][[
+                'ID', 'RCE Target ID', 'Agent', 'Target GA', 'Target CPP'
+            ]].values
+            insert_update_t = tuple(map(tuple, insert_update_t))
+            insert_update_t = ', '.join([str(i) for i in insert_update_t])
+            insert_update_t = insert_update_t.replace("'NULL'", 'NULL')
+
+            delete_t = changes[
+                (changes['Difference'] == 'right_only') &
+                (changes['Update'] == False)
+            ]['ID'].values
+            delete_t = ', '.join([f"'{i}'" for i in delete_t])
+
+            sql = []
+
+            if insert_update_t:
+                sql.append(f"""
+                    INSERT INTO AgentTarget VALUES {insert_update_t} AS new
+                        ON DUPLICATE KEY UPDATE
+                        rce_target_id = new.rce_target_id,
+                        agent_id = new.agent_id,
+                        target_ga = new.target_ga,
+                        target_cpp = new.target_cpp;
+                """)
+
+            if delete_t:
+                sql.append(f"""
+                    DELETE FROM AgentTarget WHERE `id` IN ({delete_t});
+                """)
+            
+            return sql
+        
+        case 'Daily Activation':
+            if data is not None:
+                return activation_upload(data)
+
+            else:
+                df_original = fetch_data(
+                    'Activation Editing', filter_query
+                ).reset_index()
+                df_original['ID'] = df_original['ID'].astype(str)
+            
+            order_type = ['New Registration', 'Migration', 'Change Postpaid Plan']
+            tactical_regular = ['Tactical', 'Regular']
+
+            df_modified: pd.DataFrame = st.data_editor(
+                df_original, num_rows='dynamic',
+                use_container_width=True, on_change=is_editing,
+                column_config={
+                    'ID': st.column_config.TextColumn(
+                        disabled=True, default='auto'
+                    ),
+                    'Date': st.column_config.DateColumn(
+                        required=True, default=datetime.now().date(),
+                        format='DD/MM/YYYY'
+                    ),
+                    'Tenure': st.column_config.NumberColumn(min_value=1, step=1),
+                    'Agent': st.column_config.SelectboxColumn(
+                        options=fetch_data_primary('Agent Id Name').index,
+                        required=True,
+                    ),
+                    'Order Type': st.column_config.SelectboxColumn(
+                        options=order_type, default=order_type[0]
+                    ),
+                    'Tactical Regular': st.column_config.SelectboxColumn(
+                        options=tactical_regular, default=tactical_regular[0]
+                    ),
+                    'Guaranteed Revenue': st.column_config.NumberColumn(
+                        min_value=0
+                    )
+                }
+            )
+
+            df_modified['ID'] = df_modified['ID'].replace('auto', None)
+            
+            changes = df_modified.merge(
+                df_original, indicator = True, how='outer',
+            ).loc[lambda x : x['_merge'] != 'both'].copy()
+
+            changes.fillna({
+                'ID': 'NULL', 'Date': 'NULL', 'Product': 'NULL', 'Tenure': 'NULL',
+                'Order Type': 'NULL', 'Tactical Regular': 'NULL',
+                'Guaranteed Revenue': 'NULL'
+            }, inplace=True)
+            changes.rename(columns={'_merge': 'Difference'}, inplace=True)
+            changes['Update'] = (
+                (changes.duplicated(subset=['ID'], keep=False)) &
+                (changes['Difference'] == 'right_only')
+            )
+            changes['Agent'] = changes['Agent'].str.split(':').str[0]
+            changes['Date'] = changes['Date'].astype(str)
+
+            insert_update_act = changes[
+                changes['Difference'] == 'left_only'
+            ][[
+                'ID', 'Date', 'Product', 'Tenure', 'Agent', 'Order Type',
+                'Tactical Regular', 'Guaranteed Revenue'
+            ]].values
+            insert_update_act = tuple(map(tuple, insert_update_act))
+            insert_update_act = ', '.join([str(i) for i in insert_update_act])
+            insert_update_act = insert_update_act.replace("'NULL'", 'NULL')
+
+            delete_act = changes[
+                (changes['Difference'] == 'right_only') &
+                (changes['Update'] == False)
+            ]['ID'].values
+            delete_act = ', '.join([f"'{i}'" for i in delete_act])
+
+            sql = []
+
+            if insert_update_act:
+                sql.append(f"""
+                    INSERT INTO DailyActivation VALUES {insert_update_act} AS new
+                        ON DUPLICATE KEY UPDATE
+                        activation_date = new.activation_date,
+                        tenure = new.tenure,
+                        agent_id = new.agent_id,
+                        order_type = new.order_type,
+                        tactical_regular = new.tactical_regular,
+                        guaranteed_revenue = new.guaranteed_revenue;
+                """)
+
+            if delete_act:
+                sql.append(f"""
+                    DELETE FROM DailyActivation WHERE `id` IN ({delete_act});
+                """)
+            
+            return sql
 
 def execute_sql_query(sql: list):
     ss.db_is_loading = True
