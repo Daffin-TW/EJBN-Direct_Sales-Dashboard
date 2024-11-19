@@ -71,7 +71,9 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
         st.write(
             merge[merge['NIK'].isna()][
                     ['dealer_id', 'nik_sales']
-                ].drop_duplicates()
+                ].drop_duplicates().sort_values([
+                        'dealer_id', 'nik_sales'
+                    ])
         )
         st.markdown('**Berikut data dengan Agent yang belum masuk database**')
         result = result[result['Agent'].isna()]
