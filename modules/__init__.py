@@ -1,5 +1,5 @@
 from .database import (
-    connect_db, check_connection, fetch_data, edit_channel, edit_rce,
+    connect_db, fetch_data, edit_channel, edit_rce,
     edit_agent, edit_rce_target, edit_agent_target, edit_activation,
     execute_sql_query
 )

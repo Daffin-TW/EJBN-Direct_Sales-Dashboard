@@ -13,7 +13,7 @@ def filter_name():
 
 def filter_channel():
     st.markdown('**Channel**')
-    options = fetch_data_primary('Channel')
+    options = fetch_data_primary('Channel').index
     selection = st.multiselect(
         'filter_channel', options=options,
         placeholder='Filter berdasarkan Channel',
@@ -23,7 +23,7 @@ def filter_channel():
 
 def filter_rce():
     st.markdown('**RCE**')
-    options = fetch_data_primary('Rce Id Name')
+    options = fetch_data_primary('Rce Id Name').index
     selection = st.multiselect(
         'filter_rce', options=options,
         placeholder='Filter berdasarkan RCE',

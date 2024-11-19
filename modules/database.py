@@ -18,17 +18,17 @@ pd.set_option('future.no_silent_downcasting', True)
 st.cache_resource(show_spinner=False, ttl=300)
 def connect_db():
     try:
-        with st.spinner('Menghubungi database, mohon ditunggu...'):
-            db_connection = mysql.connector.connect(
-                host=st.secrets.db_credentials.host,
-                user=st.secrets.db_credentials.username,
-                password=st.secrets.db_credentials.password,
-                database=st.secrets.db_credentials.database,
-                port=st.secrets.db_credentials.port,
-                charset=st.secrets.db_credentials.charset
-            )
+        # with st.spinner('Menghubungi database, mohon ditunggu...'):
+        db_connection = mysql.connector.connect(
+            host=st.secrets.db_credentials.host,
+            user=st.secrets.db_credentials.username,
+            password=st.secrets.db_credentials.password,
+            database=st.secrets.db_credentials.database,
+            port=st.secrets.db_credentials.port,
+            charset=st.secrets.db_credentials.charset
+        )
 
-            return db_connection
+        return db_connection
     
     except:
         st.toast("""
@@ -38,24 +38,22 @@ def connect_db():
         st.error('⛔ Database tidak bisa dihubungi.')
         st.stop()
 
-def check_connection():
-    if not ss.db_connection.is_connected():
-        st.toast(
-            'Database tidak terhubung. Mencoba untuk menghubung kembali.',
-            icon='⛔'
-        )
-        st.cache_resource.clear()
-        ss.db_connection = connect_db()
+# def check_connection():
+#     if not ss.db_connection.is_connected():
+#         st.toast(
+#             'Database tidak terhubung. Mencoba untuk menghubung kembali.',
+#             icon='⛔'
+#         )
+#         st.cache_resource.clear()
+#         ss.db_connection = connect_db()
 
 @st.cache_data(show_spinner=False, ttl=300)
 def sql_to_dataframe(sql: str):
     with st.spinner('Sedang memuat data, mohon ditunggu...'):
-        ss.db_is_loading = True
+        db_conn = connect_db()
+        df = pd.read_sql(sql, db_conn)
+        db_conn.close()
 
-        check_connection()
-        df = pd.read_sql(sql, ss.db_connection)
-
-    ss.db_is_loading = False
     return df.set_index(df.columns[0])
 
 def fetch_data(table: str, filter_query: str = ''):
@@ -207,43 +205,20 @@ def fetch_data(table: str, filter_query: str = ''):
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')
     
-    if not ss.get('db_is_loading', False):
-        return sql_to_dataframe(sql + ';')
-    else:
-        sleep(2)
-        ss.db_is_loading = False
-        st.rerun()
+    return sql_to_dataframe(sql + ';')
         
 def fetch_data_primary(table: str):
     match table:
         case 'Channel':
             sql = 'SELECT `code` AS `Code` FROM Channel;'
-            if not ss.get('db_is_loading', False):
-                return sql_to_dataframe(sql).index
-            else:
-                sleep(2)
-                ss.db_is_loading = False
-                st.rerun()
         
         case 'Rce':
             sql = """SELECT DISTINCT `name` AS "Name" FROM Rce AS R
                         INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
-            if not ss.get('db_is_loading', False):
-                return sql_to_dataframe(sql)
-            else:
-                sleep(2)
-                ss.db_is_loading = False
-                st.rerun()
         
         case 'Rce Id Name':
             sql = """SELECT CONCAT(R.id, ': ', P.`name`) AS "RCE" FROM Rce AS R
                         INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
-            if not ss.get('db_is_loading', False):
-                return sql_to_dataframe(sql).index
-            else:
-                sleep(2)
-                ss.db_is_loading = False
-                st.rerun()
         
         case 'Agent Id Name':
             sql = """SELECT CONCAT(
@@ -252,12 +227,6 @@ def fetch_data_primary(table: str):
                         INNER JOIN Rce AS R ON A.rce_id = R.id
                         INNER JOIN Person AS P ON A.agent_nik = P.nik
                         ORDER BY A.id;"""
-            if not ss.get('db_is_loading', False):
-                return sql_to_dataframe(sql).index
-            else:
-                sleep(2)
-                ss.db_is_loading = False
-                st.rerun()
         
         case 'Rce Target Id Name':
             sql = """
@@ -271,15 +240,11 @@ def fetch_data_primary(table: str):
                     INNER JOIN Person P ON R.rce_nik = P.nik
                 ORDER BY
                     RT.id;"""
-            if not ss.get('db_is_loading', False):
-                return sql_to_dataframe(sql).index
-            else:
-                sleep(2)
-                ss.db_is_loading = False
-                st.rerun()
         
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')
+
+    return sql_to_dataframe(sql)
 
 def is_editing():
     ss.done_editing = False
@@ -356,7 +321,7 @@ def edit_rce(filter_query: str = ''):
                 required=True, default='Nama RCE'
             ),
             'Channel': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Channel'), required=True
+                options=fetch_data_primary('Channel').index, required=True
             ),
             'Employment Date': st.column_config.DateColumn(
                 default=datetime.now().date(), format='DD/MM/YYYY'
@@ -453,7 +418,7 @@ def edit_agent(filter_query: str = ''):
         column_config={
             'ID': st.column_config.TextColumn(disabled=True, default='auto'),
             'RCE': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Rce Id Name'), required=True
+                options=fetch_data_primary('Rce Id Name').index, required=True
             ),
             'NIK': st.column_config.TextColumn(
                 default=None, max_chars=12,
@@ -564,7 +529,7 @@ def edit_rce_target(filter_query: str = ''):
         column_config={
             'ID': st.column_config.TextColumn(disabled=True, default='auto'),
             'RCE': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Rce Id Name'), required=True,
+                options=fetch_data_primary('Rce Id Name').index, required=True,
             ),
             'Tahun': st.column_config.NumberColumn(
                 required=True, default=datetime.now().year,
@@ -653,10 +618,12 @@ def edit_agent_target(filter_query: str = ''):
         column_config={
             'ID': st.column_config.TextColumn(disabled=True, default='auto'),
             'RCE Target ID': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Rce Target Id Name'), required=True,
+                options=fetch_data_primary('Rce Target Id Name').index,
+                required=True,
             ),
             'Agent': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Agent Id Name'), required=True,
+                options=fetch_data_primary('Agent Id Name').index,
+                required=True,
             ),
             'Target GA': st.column_config.NumberColumn(),
             'Target CPP': st.column_config.NumberColumn()
@@ -788,7 +755,7 @@ def edit_activation(data: pd.DataFrame = None, filter_query: str = ''):
             ),
             'Tenure': st.column_config.NumberColumn(min_value=1, step=1),
             'Agent': st.column_config.SelectboxColumn(
-                options=fetch_data_primary('Agent Id Name'), required=True,
+                options=fetch_data_primary('Agent Id Name').index, required=True,
             ),
             'Order Type': st.column_config.SelectboxColumn(
                 options=order_type, default=order_type[0]
@@ -858,7 +825,6 @@ def edit_activation(data: pd.DataFrame = None, filter_query: str = ''):
 
 def execute_sql_query(sql: list):
     ss.db_is_loading = True
-    check_connection()
 
     try:
         cursor: db_cur = ss.db_connection.cursor()
@@ -876,7 +842,6 @@ def execute_sql_query(sql: list):
     except Exception as e:
         cursor.close()
         st.cache_data.clear()
-        check_connection()
         ss.db_is_loading = False
 
         return (False, e)

@@ -1,6 +1,6 @@
 
 from modules import (
-    init_configuration, init_content, init_sidebar, connect_db, check_connection,
+    init_configuration, init_content, init_sidebar, connect_db,
     edit_channel, edit_rce, edit_agent, edit_rce_target, edit_agent_target,
     edit_activation, execute_sql_query, preprocessing_daily_activation,
     filter_edit
@@ -19,10 +19,6 @@ def initialization():
 
     if not ss.get('edit_selection', False):
         ss.edit_selection = 'Channel'
-
-    if not ss.get('db_connection', False):
-        ss.db_connection = connect_db()
-    check_connection()
 
 def current_table():
     button_edit_database = {
