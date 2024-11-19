@@ -2,6 +2,7 @@ from mysql.connector.abstracts import MySQLCursorAbstract as db_cur
 from streamlit import session_state as ss
 from warnings import filterwarnings
 from datetime import datetime
+from time import sleep
 import mysql.connector
 import streamlit as st
 import pandas as pd
@@ -208,6 +209,10 @@ def fetch_data(table: str, filter_query: str = ''):
     
     if not ss.get('db_is_loading', False):
         return sql_to_dataframe(sql + ';')
+    else:
+        sleep(2)
+        ss.db_is_loading = False
+        st.rerun()
         
 def fetch_data_primary(table: str):
     match table:
@@ -215,18 +220,30 @@ def fetch_data_primary(table: str):
             sql = 'SELECT `code` AS `Code` FROM Channel;'
             if not ss.get('db_is_loading', False):
                 return sql_to_dataframe(sql).index
+            else:
+                sleep(2)
+                ss.db_is_loading = False
+                st.rerun()
         
         case 'Rce':
             sql = """SELECT DISTINCT `name` AS "Name" FROM Rce AS R
                         INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
             if not ss.get('db_is_loading', False):
                 return sql_to_dataframe(sql)
+            else:
+                sleep(2)
+                ss.db_is_loading = False
+                st.rerun()
         
         case 'Rce Id Name':
             sql = """SELECT CONCAT(R.id, ': ', P.`name`) AS "RCE" FROM Rce AS R
                         INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
             if not ss.get('db_is_loading', False):
                 return sql_to_dataframe(sql).index
+            else:
+                sleep(2)
+                ss.db_is_loading = False
+                st.rerun()
         
         case 'Agent Id Name':
             sql = """SELECT CONCAT(
@@ -237,6 +254,10 @@ def fetch_data_primary(table: str):
                         ORDER BY A.id;"""
             if not ss.get('db_is_loading', False):
                 return sql_to_dataframe(sql).index
+            else:
+                sleep(2)
+                ss.db_is_loading = False
+                st.rerun()
         
         case 'Rce Target Id Name':
             sql = """
@@ -252,6 +273,10 @@ def fetch_data_primary(table: str):
                     RT.id;"""
             if not ss.get('db_is_loading', False):
                 return sql_to_dataframe(sql).index
+            else:
+                sleep(2)
+                ss.db_is_loading = False
+                st.rerun()
         
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')
