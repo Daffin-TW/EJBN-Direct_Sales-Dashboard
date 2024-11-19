@@ -88,8 +88,10 @@ def upload_file():
     else:
         ss.done_editing = False
     
-    df = pd.read_excel(upload_file)
-    df = preprocessing_daily_activation(df)
+    with st.spinner('Mengolah data, mohon ditunggu...'):
+        df = pd.read_excel(upload_file)
+        df = preprocessing_daily_activation(df)
+        
     tanggal = [df['Date'].min(), df['Date'].max()]
     
     st.write(df)
