@@ -72,7 +72,7 @@ def filter_edit(table: str):
             active = filter_active()
             
             if name:
-                sql.append(f'P.`name` LIKE "%{name}%"')
+                sql.append(f"P.`name` LIKE '%{name}%'")
             if channel:
                 sql.append(f'R.channel_code IN {channel}')
             if active == 'Active':
@@ -95,7 +95,7 @@ def filter_edit(table: str):
             active = filter_active()
             
             if name:
-                sql.append(f'PA.`name` LIKE "%{name}%"')
+                sql.append(f"PA.`name` LIKE '%{name}%'")
             if rce:
                 sql.append(f'A.rce_id IN {rce}')
             if channel:
@@ -119,7 +119,7 @@ def filter_edit(table: str):
             active = filter_active()
             
             if name:
-                sql.append(f'P.`name` LIKE "%{name}%"')
+                sql.append(f"P.`name` LIKE '%{name}%'")
             if rce:
                 sql.append(f'RT.rce_id IN {rce}')
             if channel:
@@ -148,7 +148,7 @@ def filter_edit(table: str):
             active = filter_active()
             
             if name:
-                sql.append(f'PA.`name` LIKE "%{name}%"')
+                sql.append(f"PA.`name` LIKE '%{name}%'")
             if rce:
                 sql.append(f'RT.rce_id IN {rce}')
             if channel:
@@ -175,7 +175,7 @@ def filter_edit(table: str):
             date = filter_date()
             
             if name:
-                sql.append(f'P.`name` LIKE "%{name}%"')
+                sql.append(f"P.`name` LIKE '%{name}%'")
             if rce:
                 sql.append(f'R.id IN {rce}')
             if channel:
