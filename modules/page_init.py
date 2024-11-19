@@ -30,9 +30,14 @@ def init_content():
     
     # Create the button and the switch pages function
     for column, page in zip(button_columns, pages.keys()):
-        if column.button(
+        button_bool = column.button(
             pages[page], f'{page}_button',
-            use_container_width=True) and ss.navigation != pages[page].lower():
+            use_container_width=True
+        )
+
+        condition = button_bool and ss.navigation != pages[page].lower()
+        
+        if condition and not ss.get('db_is_loading', False):
             ss.is_firsttime = True
             st.switch_page(f'pages/{page}.py')
 
@@ -52,6 +57,6 @@ def init_sidebar():
             label_visibility='collapsed', placeholder='Pilih Halaman')
         
         # Switch pages if the navigation is not referring to current page
-        if nav_input.lower() != ss.navigation:
+        if nav_input.lower() != ss.navigation and not ss.get('db_is_loading', False):
             ss.is_firsttime = True
             st.switch_page(f'pages/{nav_input.split()[-1].lower()}.py')

@@ -48,8 +48,13 @@ def check_connection():
 
 @st.cache_data(show_spinner=False, ttl=300)
 def sql_to_dataframe(sql: str):
-    check_connection()
-    df = pd.read_sql(sql, ss.db_connection)
+    with st.spinner('Sedang memuat data, mohon ditunggu...'):
+        ss.db_is_loading = True
+
+        check_connection()
+        df = pd.read_sql(sql, ss.db_connection)
+
+    ss.db_is_loading = False
     return df.set_index(df.columns[0])
 
 def fetch_data(table: str, filter_query: str = ''):
@@ -821,6 +826,7 @@ def edit_activation(data: pd.DataFrame = None, filter_query: str = ''):
     return sql
 
 def execute_sql_query(sql: list):
+    ss.db_is_loading = True
     check_connection()
 
     try:
@@ -832,6 +838,7 @@ def execute_sql_query(sql: list):
 
         cursor.close()
         st.cache_data.clear()
+        ss.db_is_loading = False
 
         return (True, 'Success')
     
@@ -839,5 +846,6 @@ def execute_sql_query(sql: list):
         cursor.close()
         st.cache_data.clear()
         check_connection()
+        ss.db_is_loading = False
 
         return (False, e)
