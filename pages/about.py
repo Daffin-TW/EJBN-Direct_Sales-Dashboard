@@ -1,6 +1,6 @@
 from modules import (
-    check_login_state, init_configuration, init_sidebar,
-    init_content, connect_db, check_connection)
+    init_configuration, init_sidebar, init_content
+)
 from streamlit import session_state as ss
 import streamlit as st
 
