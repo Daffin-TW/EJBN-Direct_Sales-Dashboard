@@ -10,14 +10,14 @@ def submit_callback():
     if not ss.get('password', False):
         ss.password = ''
 
-    actual_username: str = sc.user_credentials.username
-    actual_password: str = sc.user_credentials.password
+    user_credentials = sc.user_credentials
+    credentials = [tuple(i.values()) for i in user_credentials]
     
-    if ss.username == actual_username and ss.password == actual_password:
+    if (ss.username, ss.password) in credentials:
         ss.login_message = True
         ss.login_state = True
         
-    elif ss.username != actual_username or ss.password != actual_password:
+    else:
         ss.password = ''
 
 # Makes a login form
