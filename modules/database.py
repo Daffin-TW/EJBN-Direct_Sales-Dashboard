@@ -206,23 +206,27 @@ def fetch_data(table: str, filter_query: str = ''):
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')
     
-    return sql_to_dataframe(sql + ';')
+    if not ss.get('db_is_loading', False):
+        return sql_to_dataframe(sql + ';')
         
 def fetch_data_primary(table: str):
     match table:
         case 'Channel':
             sql = 'SELECT `code` AS `Code` FROM Channel;'
-            return sql_to_dataframe(sql).index
+            if not ss.get('db_is_loading', False):
+                return sql_to_dataframe(sql).index
         
         case 'Rce':
             sql = """SELECT DISTINCT `name` AS "Name" FROM Rce AS R
                         INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
-            return sql_to_dataframe(sql)
+            if not ss.get('db_is_loading', False):
+                return sql_to_dataframe(sql)
         
         case 'Rce Id Name':
             sql = """SELECT CONCAT(R.id, ': ', P.`name`) AS "RCE" FROM Rce AS R
                         INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
-            return sql_to_dataframe(sql).index
+            if not ss.get('db_is_loading', False):
+                return sql_to_dataframe(sql).index
         
         case 'Agent Id Name':
             sql = """SELECT CONCAT(
@@ -231,7 +235,8 @@ def fetch_data_primary(table: str):
                         INNER JOIN Rce AS R ON A.rce_id = R.id
                         INNER JOIN Person AS P ON A.agent_nik = P.nik
                         ORDER BY A.id;"""
-            return sql_to_dataframe(sql).index
+            if not ss.get('db_is_loading', False):
+                return sql_to_dataframe(sql).index
         
         case 'Rce Target Id Name':
             sql = """
@@ -245,7 +250,8 @@ def fetch_data_primary(table: str):
                     INNER JOIN Person P ON R.rce_nik = P.nik
                 ORDER BY
                     RT.id;"""
-            return sql_to_dataframe(sql).index
+            if not ss.get('db_is_loading', False):
+                return sql_to_dataframe(sql).index
         
         case _:
             raise KeyError(f'{table} tidak ditemukan di database')

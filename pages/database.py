@@ -1,7 +1,6 @@
 from modules import (
     init_configuration, init_sidebar, init_content,
     connect_db, check_connection, fetch_data)
-from datetime import datetime, timedelta
 from streamlit import session_state as ss
 import streamlit as st
 
