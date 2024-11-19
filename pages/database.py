@@ -1,8 +1,13 @@
+
 from modules import (
-    init_configuration, init_sidebar, init_content,
-    connect_db, check_connection, fetch_data)
+    init_configuration, init_content, init_sidebar, connect_db, check_connection,
+    edit_channel, edit_rce, edit_agent, edit_rce_target, edit_agent_target,
+    edit_activation, execute_sql_query, preprocessing_daily_activation,
+    filter_edit
+)
 from streamlit import session_state as ss
 import streamlit as st
+import pandas as pd
 
 
 def initialization():
@@ -12,87 +17,188 @@ def initialization():
     init_content()
     init_sidebar()
 
+    if not ss.get('edit_selection', False):
+        ss.edit_selection = 'Channel'
+
     if not ss.get('db_connection', False):
         ss.db_connection = connect_db()
     check_connection()
 
+def current_table():
+    button_edit_database = {
+        'Channel': ss.button_channel,
+        'RCE': ss.button_rce,
+        'Agent': ss.button_agent,
+        'RCE Target': ss.button_rce_target,
+        'Agent Target': ss.button_agent_target,
+        'Daily Activation': ss.button_activation
+    }
+
+    ss.edit_selection = ''.join([
+        key for key, value in button_edit_database.items() if value == True
+    ])
+
+def apply_button_click(sql: list, dialog: bool = False):
+    result = execute_sql_query(sql)
+    ss.done_editing = True
+
+    if dialog:
+        return None
+
+    if result[0]:
+        st.toast('Perubahan Berhasil disimpan')
+    else:
+        ss.error_editing = True
+        st.toast("""
+            Mengalami kendala? Hubungi [Daffin_TW](https://wa.me/6282332232896)
+            untuk bertanya atau perbaikan.
+        """, icon='🚨')
+        st.error(result[1])
+
+def is_encounter_an_error():
+    if ss.get('error_editing', False):
+        ss.error_editing = False
+        st.stop()
+
+def apply_button(sql: str, dialog=False):
+    if (sql and not ss.get('invalid_edit', False) and
+            not ss.get('done_editing', False)):
+        return st.button(
+            'Simpan Perubahan', key='apply_button',
+            on_click=lambda: apply_button_click(sql, dialog)
+        )
+
+@st.dialog('Unggah File', width='large')
+def upload_file():
+    upload_file = st.file_uploader(
+        'Unggah File Excel', key='uploaded_file',
+        type=['xlsx'],
+        label_visibility='collapsed'
+    )
+
+    if upload_file is None:
+        return None
+    else:
+        ss.done_editing = False
+    
+    df = pd.read_excel(upload_file)
+    df = preprocessing_daily_activation(df)
+    tanggal = [df['Date'].min(), df['Date'].max()]
+    
+    st.write(df)
+
+    if ss.get('invalid_edit', False):
+        st.stop()
+
+    st.warning(
+        f'Perubahan akan menghapus data dari tanggal **{tanggal[0]}** ' +
+        f'sampai dengan **{tanggal[1]}**', icon='⚠'
+    )
+    
+    sql = edit_activation(df)
+    
+    if apply_button(sql, dialog=True):
+        st.rerun()
+
 
 initialization()
 
-# Add a button to edit the database
-with st.sidebar:
-    st.button(
-        '⚙ Edit Database', 'edit_button',
-        use_container_width=True, type='primary'
-    )
-    if ss.edit_button:
-        st.switch_page('pages/database_edit.py')
+columns = st.columns(6)
 
-# Select database category
-tab_agent, tab_target, tab_activation = st.tabs(
-    ('Agent', 'Target', 'Daily Activation')
-)
+columns[0].button(
+    'Channel', key='button_channel',
+    use_container_width=True, on_click=current_table)
+columns[1].button(
+    'RCE', key='button_rce',
+    use_container_width=True, on_click=current_table)
+columns[2].button(
+    'Agent', key='button_agent', 
+    use_container_width=True, on_click=current_table)
 
-# Show agent database
-with tab_agent:
-    container = st.container()
+columns[3].button(
+    'RCE Target', key='button_rce_target',
+    use_container_width=True, on_click=current_table)
+columns[4].button(
+    'Agent Target', key='button_agent_target', 
+    use_container_width=True, on_click=current_table)
 
-    col1, col2 = container.columns((1, 2))
-    
-    with col1.container(border=True, height=300):
-        st.markdown('#### Channel')
-        st.dataframe(fetch_data('Channel'), use_container_width=True)
+columns[5].button(
+    'Daily Activation', key='button_activation', 
+    use_container_width=True, on_click=current_table)
+
+st.markdown(f'### Tabel {ss.edit_selection}')
+
+col1, col2 = st.columns((1, 5))
+col1.markdown('#### Filter')
+# col2.markdown('#### ')
+
+match ss.edit_selection:
+    case 'Channel':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
+        with col2:
+            is_encounter_an_error()
+            sql = edit_channel(filter_query)
+
+            if sql:
+                apply_button(sql)
+
+    case 'RCE':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
+        with col2:
+            sql = edit_rce(filter_query)
+            is_encounter_an_error()
             
-    with col2.container(border=True, height=300):
-        st.markdown('#### RCE')
-        st.dataframe(
-            fetch_data('Rce'), use_container_width=True, hide_index=True,
-            column_config={
-                'Employment Date': st.column_config.DateColumn(
-                    format='DD/MM/YYYY'),
-                'End Date': st.column_config.DateColumn(
-                    format='DD/MM/YYYY')}
-        )
-        
-    with container.container(border=True):
-        st.markdown('#### Agent')
-        st.dataframe(
-            fetch_data('Agent'), use_container_width=True, hide_index=True,
-            column_config={
-                'Employment Date': st.column_config.DateColumn(
-                    format='DD/MM/YYYY'),
-                'End Date': st.column_config.DateColumn(
-                    format='DD/MM/YYYY')}
-        )
+            if sql:
+                apply_button(sql)
 
-with tab_target:
-    col1, col2 = st.columns(2)
+    case 'Agent':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
+        with col2:
+            is_encounter_an_error()
+            sql = edit_agent(filter_query)
+            
+            if sql:
+                apply_button(sql)
 
-    with col1.container(border=True, height=700):
-        st.markdown('#### Target RCE')
-        st.dataframe(
-            fetch_data('RCE Target'), use_container_width=True, height=600,
-            hide_index=True, column_config={
-                'Tahun': st.column_config.NumberColumn(
-                    step=1, format='%i')}
-        )
+    case 'RCE Target':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
+        with col2:
+            is_encounter_an_error()
+            sql = edit_rce_target(filter_query)
+            
+            if sql:
+                apply_button(sql)
 
-    with col2.container(border=True, height=700):
-        st.markdown('#### Target Agent')
-        st.dataframe(
-            fetch_data('Agent Target'), use_container_width=True, height=600,
-            hide_index=True, column_config={
-                'Tahun': st.column_config.NumberColumn(
-                    step=1, format='%i')}
-        )
+    case 'Agent Target':
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
+        with col2:
+            is_encounter_an_error()
+            sql = edit_agent_target(filter_query)
+            
+            if sql:
+                apply_button(sql)
 
-with tab_activation:
-    with st.container(border=True, height=700):
-        st.markdown('#### Daily Activation')
-        st.dataframe(
-            fetch_data('Activation'), use_container_width=True, height=600,
-            hide_index=True, column_config={
-                'Date': st.column_config.DateColumn(format='DD/MM/YYYY')}
-        )
+    case 'Daily Activation':        
+        with col1:
+            filter_query = filter_edit(ss.edit_selection)
 
-check_connection()
+            st.markdown('Unggah File **Daily Activation**')
+            st.button(
+                'Unggah File Daily Activation', key='button_upload_file',
+                use_container_width=True, on_click=upload_file
+            )
+
+        with col2:
+            is_encounter_an_error()
+            sql = edit_activation(filter_query=filter_query)
+            
+            if sql:
+                apply_button(sql)
+    
+    case _:
+        pass

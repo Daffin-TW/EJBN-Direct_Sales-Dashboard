@@ -30,12 +30,12 @@ def init_content():
     
     # Create the button and the switch pages function
     for column, page in zip(button_columns, pages.keys()):
-        button_bool = column.button(
-            pages[page], f'{page}_button',
-            use_container_width=True
-        )
-        
-        if button_bool and not ss.navigation != pages[page].lower():
+        if (
+                column.button(
+                pages[page], f'{page}_button',
+                use_container_width=True) and
+                ss.navigation != pages[page].lower()
+            ):
             ss.is_firsttime = True
             st.switch_page(f'pages/{page}.py')
 
