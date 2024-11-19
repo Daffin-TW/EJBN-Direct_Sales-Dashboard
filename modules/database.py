@@ -2,7 +2,6 @@ from mysql.connector.abstracts import MySQLCursorAbstract as db_cur
 from streamlit import session_state as ss
 from warnings import filterwarnings
 from datetime import datetime
-from time import sleep
 import mysql.connector
 import streamlit as st
 import pandas as pd
@@ -18,7 +17,6 @@ pd.set_option('future.no_silent_downcasting', True)
 st.cache_resource(show_spinner=False, ttl=300)
 def connect_db():
     try:
-        # with st.spinner('Menghubungi database, mohon ditunggu...'):
         db_connection = mysql.connector.connect(
             host=st.secrets.db_credentials.host,
             user=st.secrets.db_credentials.username,
@@ -38,21 +36,12 @@ def connect_db():
         st.error('⛔ Database tidak bisa dihubungi.')
         st.stop()
 
-# def check_connection():
-#     if not ss.db_connection.is_connected():
-#         st.toast(
-#             'Database tidak terhubung. Mencoba untuk menghubung kembali.',
-#             icon='⛔'
-#         )
-#         st.cache_resource.clear()
-#         ss.db_connection = connect_db()
-
 @st.cache_data(show_spinner=False, ttl=300)
 def sql_to_dataframe(sql: str):
     with st.spinner('Sedang memuat data, mohon ditunggu...'):
         db_conn = connect_db()
         df = pd.read_sql(sql, db_conn)
-        # db_conn.close()
+        db_conn.close()
 
     return df.set_index(df.columns[0])
 
