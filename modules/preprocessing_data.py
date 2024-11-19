@@ -68,12 +68,13 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
 
     if any(result['Agent'].isna()):
         st.error('Terdapat Agent yang belum terdaftar pada database', icon='❗')
-        st.write(
+        st.dataframe(
             merge[merge['NIK'].isna()][
                     ['dealer_id', 'nik_sales']
                 ].drop_duplicates().sort_values([
                         'dealer_id', 'nik_sales'
-                    ])
+                    ]),
+            hide_index=True
         )
         st.markdown('**Berikut data dengan Agent yang belum masuk database**')
         result = result[result['Agent'].isna()]
