@@ -1,10 +1,40 @@
 from streamlit import session_state as ss
+from datetime import datetime, timedelta, date
 from .database import fetch_data
 import plotly.express as px
 import streamlit as st
 import pandas as pd
 
 class visualization:
+    def revenue_linechart():
+        df = fetch_data('Activation').copy()
+        date_revenue = df.groupby(
+                'activation_date'
+            )['guaranteed_revenue'].sum().reset_index()
+        date_revenue.rename(columns={
+                'activation_date': 'Tanggal',
+                'guaranteed_revenue': 'Revenue'
+            }, inplace=True)
+        
+        maximum = date_revenue['Tanggal'].max().month
+        minimum = date_revenue['Tanggal'].min().month
+        line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
+
+        fig = px.line(
+            date_revenue, x='Tanggal', y='Revenue',
+            color_discrete_sequence=['#CC2B52']
+        )
+        fig.update_layout(
+            yaxis_tickprefix='Rp',
+            yaxis_tickformat=',.1d',
+        )
+        for i in line:
+            fig.add_vline(i, line_dash='dash', line_color='#FA812F')
+
+        # fig.update_xaxes(minallowed=minimum, maxallowed=maximum)
+
+        st.write(fig)
+
     def product_barchart():
         df = fetch_data('Activation').copy()
         df['product_tenure'] = (df['product'] + ' - ' + df['tenure'].astype(str))
@@ -39,6 +69,6 @@ class visualization:
             xanchor='left',
             y=1
         ))
-        fig.update_traces(insidetextanchor="middle")
+        fig.update_traces(insidetextanchor='middle')
 
         st.write(fig)

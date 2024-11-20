@@ -15,4 +15,14 @@ def initialization():
 
 initialization()
 
-vis.product_barchart()
+def first_row():
+    col1, col2, col3 = st.columns(3)
+    
+    with st.container():
+        with col2.container(border=True):
+            vis.revenue_linechart()
+
+        with col3.container(border=True):
+            vis.product_barchart()
+
+first_row()
