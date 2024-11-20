@@ -81,8 +81,8 @@ class visualization:
                 'count': 'Jumlah Aktivasi'
             }, inplace=True)
         
-        maximum = order_type['Tanggal'].max().month
-        minimum = order_type['Tanggal'].min().month
+        maximum = int(order_type['Tanggal'].max().month)
+        minimum = int(order_type['Tanggal'].min().month)
         line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
 
         fig = px.line(
@@ -114,8 +114,8 @@ class visualization:
                 'guaranteed_revenue': 'Revenue'
             }, inplace=True)
         
-        maximum = revenue['Tanggal'].max().month
-        minimum = revenue['Tanggal'].min().month
+        maximum = int(revenue['Tanggal'].max().month)
+        minimum = int(revenue['Tanggal'].min().month)
         line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
 
         fig = px.line(
