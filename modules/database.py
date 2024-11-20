@@ -1,5 +1,6 @@
 from mysql.connector.abstracts import MySQLCursorAbstract as db_cur
 from streamlit import session_state as ss
+from streamlit import secrets as sc
 from warnings import filterwarnings
 from datetime import datetime
 import mysql.connector
@@ -18,12 +19,12 @@ st.cache_resource(show_spinner=False, ttl=300)
 def connect_db():
     try:
         db_connection = mysql.connector.connect(
-            host=st.secrets.db_credentials.host,
-            user=st.secrets.db_credentials.username,
-            password=st.secrets.db_credentials.password,
-            database=st.secrets.db_credentials.database,
-            port=st.secrets.db_credentials.port,
-            charset=st.secrets.db_credentials.charset
+            host=sc.db_credentials.host,
+            user=sc.db_credentials.username,
+            password=sc.db_credentials.password,
+            database=sc.db_credentials.database,
+            port=sc.db_credentials.port,
+            charset=sc.db_credentials.charset
         )
 
         return db_connection
@@ -74,30 +75,6 @@ def fetch_data(table: str, filter_query: str = ''):
                     ON A.agent_nik = PA.nik
                 {filter_query}
                 """
-        
-        case 'Agent':
-            sql = """
-                SELECT A.id AS "ID", PA.nik AS "NIK",
-                    PA.`name` AS "Name", PR.`name` AS "RCE", A.employment_date
-                    AS "Employment Date", A.end_date AS "End Date" 
-                FROM Person AS PR INNER JOIN Rce AS R
-                    ON PR.nik = R.rce_nik INNER JOIN Agent AS A
-                    ON R.id = A.rce_id INNER JOIN Person AS PA
-                    ON A.agent_nik = PA.nik"""
-        
-        case 'RCE Target':
-            sql = """
-                SELECT
-                    RT.id AS "ID", YEAR(RT.target_date) AS "Tahun",
-                    MONTHNAME(RT.target_date) AS "Bulan", P.`name` AS "RCE",
-                    RT.target_ga AS "Target GA", RT.target_cpp AS
-                    "Target CPP", RT.target_revenue AS "Target Revenue"
-                FROM RceTarget AS RT
-                    INNER JOIN Rce AS R ON RT.rce_id = R.id
-                    INNER JOIN Person AS P ON R.rce_nik = P.nik
-                ORDER BY
-                    RT.id
-            """
 
         case 'RCE Target Editing':
             sql = f"""
@@ -113,24 +90,6 @@ def fetch_data(table: str, filter_query: str = ''):
                 {filter_query}
                 ORDER BY
                     RT.id
-            """
-
-        case 'Agent Target':
-            sql = f"""
-                SELECT
-                    `AT`.id AS "ID",
-                    YEAR(RT.target_date) AS "Tahun",
-                    MONTHNAME(RT.target_date) AS "Bulan",
-                    PA.`name` AS "Agent",
-                    `AT`.target_ga AS "Target GA",
-                    `AT`.target_cpp AS "Target CPP"
-                FROM AgentTarget AS `AT`
-                    INNER JOIN RceTarget AS RT ON `AT`.rce_target_id = RT.id
-                    INNER JOIN Agent AS A ON `AT`.agent_id = A.id
-                    INNER JOIN Person AS PA ON A.agent_nik = PA.nik
-                {filter_query}
-                ORDER BY
-                    `AT`.id
             """
 
         case 'Agent Target Editing':
@@ -158,19 +117,8 @@ def fetch_data(table: str, filter_query: str = ''):
             """
 
         case 'Activation':
-            sql = f"""
-                SELECT
-                    DA.id AS "ID", DA.activation_date AS "Date", DA.product AS
-                    "Product", DA.tenure AS "Tenure", P.`name` AS "Agent",
-                    DA.order_type AS "Order Type",
-                    DA.tactical_regular AS "Tactical Regular",
-                    DA.guaranteed_revenue AS "Guaranteed Revenue"
-                FROM DailyActivation AS DA
-                    INNER JOIN Agent AS A ON DA.agent_id = A.id
-                    INNER JOIN Person AS P ON A.agent_nik = P.nik
-                {filter_query}
-                ORDER BY
-                    DA.activation_date, DA.id
+            sql = """
+                SELECT * FROM DailyActivation
             """
 
         case 'Activation Editing':

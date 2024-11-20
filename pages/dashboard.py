@@ -1,4 +1,6 @@
-from modules import init_configuration, init_sidebar, init_content
+from modules import (
+    init_configuration, init_sidebar, init_content, visualization as vis
+)
 from streamlit import session_state as ss
 import streamlit as st
 
@@ -13,4 +15,4 @@ def initialization():
 
 initialization()
 
-st.write('WORK IN PROGRESS')
+vis.product_barchart()

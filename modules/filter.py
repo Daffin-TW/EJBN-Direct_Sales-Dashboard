@@ -196,3 +196,15 @@ def filter_edit(table: str):
         query = ''
 
     return query
+
+def filter_dashboard():
+    sql = []
+
+    # Code goes here...
+
+    if sql:
+        query = 'WHERE ' + ' AND '.join(sql)
+    else:
+        query = ''
+
+    return query
