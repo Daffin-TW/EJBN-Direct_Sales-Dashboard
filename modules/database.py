@@ -63,6 +63,16 @@ def fetch_data(table: str, filter_query: str = ''):
                     ON R.rce_nik = P.nik
                 {filter_query}
             """
+
+        case 'Agent':
+            sql = """
+                SELECT A.id AS "ID", PA.nik AS "NIK",
+                    PA.`name` AS "Name", PR.`name` AS "RCE", A.employment_date
+                    AS "Employment Date", A.end_date AS "End Date" 
+                FROM Person AS PR INNER JOIN Rce AS R
+                    ON PR.nik = R.rce_nik INNER JOIN Agent AS A
+                    ON R.id = A.rce_id INNER JOIN Person AS PA
+                    ON A.agent_nik = PA.nik"""
         
         case 'Agent Editing':
             sql = f"""

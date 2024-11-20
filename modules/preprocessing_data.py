@@ -77,7 +77,7 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
                     ]),
             hide_index=True
         )
-        st.markdown('**Berikut data dengan Agent yang belum masuk database**')
+        st.markdown('**Berikut data dengan Agent yang belum terdaftar di database**')
         result = result[result['Agent'].isna()]
         result.drop(columns=['Agent'], inplace=True)
         ss.invalid_edit = True

@@ -6,50 +6,149 @@ import streamlit as st
 import pandas as pd
 
 class visualization:
-    def revenue_linechart():
+    def revenue_barchart():
         df = fetch_data('Activation').copy()
-        date_revenue = df.groupby(
-                'activation_date'
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+
+        revenue = df.groupby(
+                pd.Grouper(key='activation_date', freq='ME')
             )['guaranteed_revenue'].sum().reset_index()
-        date_revenue.rename(columns={
+        revenue.rename(columns={
                 'activation_date': 'Tanggal',
                 'guaranteed_revenue': 'Revenue'
             }, inplace=True)
         
-        maximum = date_revenue['Tanggal'].max().month
-        minimum = date_revenue['Tanggal'].min().month
+        fig = px.bar(
+            revenue, x='Tanggal', y='Revenue'
+        )
+        fig.update_layout(
+            barcornerradius='20%',
+            yaxis_tickprefix='Rp',
+            yaxis_tickformat=',.1d'
+        )
+        fig.update_xaxes(
+            tick0=revenue['Tanggal'].min(), dtick='M1', tickformat='%b %Y'
+        )
+        fig.update_yaxes(fixedrange=True)
+
+        st.write(fig)
+
+    def gacpp_barchart(order_type: str):
+        df = fetch_data('Activation').copy()
+        order_type_rename = {
+            'Change Postpaid Plan': 'CPP',
+            'Migration': 'GA',
+            'New Registration': 'GA'
+        }
+        df['order_type'] = df['order_type'].replace(order_type_rename)
+        df = df[df['order_type'] == order_type]
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+
+        ga = df.groupby(
+                pd.Grouper(key='activation_date', freq='ME')
+            )['order_type'].count().reset_index()
+        ga.rename(columns={
+                'activation_date': 'Tanggal',
+                'order_type': 'Jumlah Aktivasi'
+            }, inplace=True)
+        
+        fig = px.bar(
+            ga, x='Tanggal', y='Jumlah Aktivasi'
+        )
+        fig.update_layout(barcornerradius='20%')
+        fig.update_xaxes(
+            tick0=ga['Tanggal'].min(), dtick='M1', tickformat='%b %Y'
+        )
+        fig.update_yaxes(fixedrange=True)
+
+        st.write(fig)
+
+    def ordertype_linechart():
+        df = fetch_data('Activation').copy()
+        order_type_rename = {
+            'Change Postpaid Plan': 'CPP',
+            'Migration': 'GA',
+            'New Registration': 'GA'
+        }
+        df['order_type'] = df['order_type'].replace(order_type_rename)
+        order_type = df.groupby(
+                'activation_date'
+            )['order_type'].value_counts().reset_index()
+        order_type.rename(columns={
+                'activation_date': 'Tanggal',
+                'order_type': 'Tipe Order',
+                'count': 'Jumlah Aktivasi'
+            }, inplace=True)
+        
+        maximum = order_type['Tanggal'].max().month
+        minimum = order_type['Tanggal'].min().month
         line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
 
         fig = px.line(
-            date_revenue, x='Tanggal', y='Revenue',
+            order_type, x='Tanggal', y='Jumlah Aktivasi', color='Tipe Order',
+            color_discrete_sequence=['#FF8225', '#7AB2D3'],
+        )
+        fig.update_layout(
+            hovermode='x unified', legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                xanchor='left',
+                y=1
+            )
+        )
+        fig.update_xaxes(showline=True)
+        fig.update_yaxes(fixedrange=True)
+        for i in line:
+            fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
+
+        st.write(fig)
+
+    def revenue_linechart():
+        df = fetch_data('Activation').copy()
+        revenue = df.groupby(
+                'activation_date'
+            )['guaranteed_revenue'].sum().reset_index()
+        revenue.rename(columns={
+                'activation_date': 'Tanggal',
+                'guaranteed_revenue': 'Revenue'
+            }, inplace=True)
+        
+        maximum = revenue['Tanggal'].max().month
+        minimum = revenue['Tanggal'].min().month
+        line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
+
+        fig = px.line(
+            revenue, x='Tanggal', y='Revenue',
             color_discrete_sequence=['#CC2B52']
         )
         fig.update_layout(
             yaxis_tickprefix='Rp',
             yaxis_tickformat=',.1d',
+            hovermode='x unified'
         )
-        for i in line:
-            fig.add_vline(i, line_dash='dash', line_color='#FA812F')
 
-        # fig.update_xaxes(minallowed=minimum, maxallowed=maximum)
+        fig.update_xaxes(showline=True)
+        fig.update_yaxes(fixedrange=True)
+        for i in line:
+            fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
         st.write(fig)
 
     def product_barchart():
         df = fetch_data('Activation').copy()
         df['product_tenure'] = (df['product'] + ' - ' + df['tenure'].astype(str))
-        product_values = df.value_counts(subset=['product_tenure', 'order_type'])
-        product_values = product_values.reset_index()
-        index_range = len(product_values['product_tenure'].unique())
+        product = df.value_counts(subset=['product_tenure', 'order_type'])
+        product = product.reset_index()
+        index_range = len(product['product_tenure'].unique())
 
-        product_values.rename(columns={
+        product.rename(columns={
             'product_tenure': 'Produk & Tenure',
-            'count': 'Jumlah',
+            'count': 'Jumlah Aktivasi',
             'order_type': 'Tipe Order'
         }, inplace=True)
 
         fig = px.bar(
-            product_values, x='Jumlah', y='Produk & Tenure',
+            product, x='Jumlah Aktivasi', y='Produk & Tenure',
             color='Tipe Order', text_auto=True,
             color_discrete_sequence=['#DBD3D3', '#FF7F3E', '#0D92F4'],
             category_orders={
@@ -58,17 +157,21 @@ class visualization:
                 ]
             }
         )
+        fig.update_layout(
+            barcornerradius='20%',
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                xanchor='left',
+                y=1
+            )
+        )
         fig.update_yaxes(
             categoryorder='total ascending',
-            range=[index_range - 10.5, index_range]
+            range=[index_range - 10.5, index_range],
+            minallowed=0, maxallowed=index_range
         )
-        fig.update_xaxes(showgrid=True)
-        fig.update_layout(legend=dict(
-            orientation='h',
-            yanchor='bottom',
-            xanchor='left',
-            y=1
-        ))
+        fig.update_xaxes(showgrid=True, minallowed=0)
         fig.update_traces(insidetextanchor='middle')
 
         st.write(fig)
