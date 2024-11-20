@@ -70,8 +70,7 @@ def upload_file():
         label_visibility='collapsed'
     )
 
-    if upload_file is None:
-        st.markdown("""
+    column_message = """
             **Masukkan data dengan kolom berikut:**  
             - activation_date
             - Package_Rev
@@ -83,7 +82,10 @@ def upload_file():
             - RCM
             - Tactical/Regular
             - Guaranteed Revenue (Mio)
-        """)
+        """
+
+    if upload_file is None:
+        st.markdown(column_message)
         return None
     else:
         ss.done_editing = False
@@ -92,12 +94,15 @@ def upload_file():
         df = pd.read_excel(upload_file)
         df = preprocessing_daily_activation(df)
         
-    tanggal = [df['Date'].min(), df['Date'].max()]
-    
+    if df is None:
+        st.markdown(column_message)
+
     st.write(df)
 
     if ss.get('invalid_edit', False):
         st.stop()
+
+    tanggal = [df['Date'].min(), df['Date'].max()]
 
     st.warning(
         f'Perubahan akan menghapus data dari tanggal **{tanggal[0]}** ' +

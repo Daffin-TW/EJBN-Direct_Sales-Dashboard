@@ -18,30 +18,31 @@ def product_extraction(data: str):
 @st.cache_data(ttl=60, show_spinner=False)
 def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
     columns = {
-        'activation_date', 'Package_Rev', 'order_type',
-        'tenure', 'dealer_id', 'nik_sales', 'salesperson_nm', 'RCM',
-        'Tactical/Regular', 'Guaranteed Revenue (Mio)'
+        'activation_date', 'package_rev', 'order_type',
+        'tenure', 'dealer_id', 'nik_sales', 'salesperson_nm', 'rcm',
+        'tactical/regular', 'guaranteed revenue (mio)'
     }
 
+    data.columns = map(str.lower, data.columns)
     check_columns = columns - set(data.columns)
 
     if check_columns:
         st.error(f'Tidak ada kolom {list(check_columns)}')
-        st.stop()
+        return None
 
     df = data[list(columns)].copy()
 
     df = df[df['dealer_id'].isin(['DS03', 'DS04', 'DS05'])]
-    df = df[df['RCM'] != 'Indra Irawati'].reset_index(drop=True)
+    df = df[df['rcm'] != 'Indra Irawati'].reset_index(drop=True)
 
     df['activation_date'] = pd.to_datetime(
         df['activation_date'], format='%Y%m%d'
     ).dt.date
-    df['tenure'] = df['Package_Rev'].apply(tenure_extraction)
-    df['Guaranteed Revenue (Mio)'] = (
-        df['Guaranteed Revenue (Mio)'] * 1000000
+    df['tenure'] = df['package_rev'].apply(tenure_extraction)
+    df['guaranteed revenue (mio)'] = (
+        df['guaranteed revenue (mio)'] * 1000000
     ).astype(int)
-    df['product'] = df['Package_Rev'].apply(product_extraction)
+    df['product'] = df['package_rev'].apply(product_extraction)
     
     agent = fetch_data('Agent').reset_index()
     agent.sort_values('Employment Date', inplace=True)
@@ -59,8 +60,8 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
     selected_column = {
         'activation_date': 'Date', 'product': 'Product', 'tenure': 'Tenure',
         'NIK': 'Agent', 'nik_sales': 'NIK Sales', 'order_type': 'Order Type',
-        'Tactical/Regular': 'Tactical Regular',
-        'Guaranteed Revenue (Mio)': 'Guaranteed Revenue'
+        'tactical/regular': 'Tactical Regular',
+        'guaranteed revenue (mio)': 'Guaranteed Revenue'
     }
 
     result = merge[selected_column.keys()].copy()
