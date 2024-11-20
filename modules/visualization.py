@@ -71,6 +71,7 @@ class visualization:
             'New Registration': 'GA'
         }
         df['order_type'] = df['order_type'].replace(order_type_rename)
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
         order_type = df.groupby(
                 'activation_date'
             )['order_type'].value_counts().reset_index()
