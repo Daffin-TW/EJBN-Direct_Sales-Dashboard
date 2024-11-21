@@ -35,7 +35,7 @@ def filter_date():
     st.markdown('**Tanggal**')
     return st.date_input(
         'filter_date_input', label_visibility='collapsed',
-        value=(datetime.now() - timedelta(days=90), datetime.now()),
+        value=(datetime.now() - timedelta(days=184), datetime.now()),
         format='DD/MM/YYYY'
     )
 
@@ -197,10 +197,44 @@ def filter_edit(table: str):
 
     return query
 
-def filter_dashboard():
+def filter_dashboard(table: str):
     sql = []
 
-    # Code goes here...
+    match table:
+        case 'Daily Activation':
+            with st.expander('**Filter**', icon='🔎', expanded=True):
+                row1_col1, row1_col2 = st.columns(2)
+                row2_col1, row2_col2 = st.columns(2)
+
+            with row1_col1:
+                name = filter_name()
+            with row1_col2:
+                rce = filter_rce()
+            with row2_col1:
+                channel = filter_channel()
+            with row2_col2:
+                date = filter_date()
+
+            if name:
+                sql.append(f"P.`name` LIKE '%{name}%'")
+            if rce:
+                sql.append(f'R.id IN {rce}')
+            if channel:
+                sql.append(f'R.channel_code IN {channel}')
+            if len(date) == 1:
+                sql.append(f"DA.activation_date >= '{date[0]}'")
+            elif len(date) == 2:
+                sql.append(f"""(
+                DA.activation_date BETWEEN '{date[0]}' AND '{date[1]}'
+            )""")
+
+            if sql:
+                query = 'WHERE ' + ' AND '.join(sql)
+            else:
+                query = ''
+            
+        case _:
+            st.error(f'Tidak ada tabel dengan nama {table}')
 
     if sql:
         query = 'WHERE ' + ' AND '.join(sql)

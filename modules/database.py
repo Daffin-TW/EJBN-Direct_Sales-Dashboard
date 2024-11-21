@@ -126,8 +126,18 @@ def fetch_data(table: str, filter_query: str = ''):
             """
 
         case 'Activation':
-            sql = """
-                SELECT * FROM DailyActivation
+            sql = f"""
+                SELECT
+                    DA.activation_date, DA.product,
+                    DA.tenure, DA.agent_id, DA.order_type,
+                    DA.tactical_regular, DA.guaranteed_revenue
+                FROM DailyActivation AS DA
+                    INNER JOIN Agent AS A ON DA.agent_id = A.id
+                    INNER JOIN Person AS P ON A.agent_nik = P.nik
+                    INNER JOIN Rce AS R ON A.rce_id = R.id
+                {filter_query}
+                ORDER BY
+                    DA.activation_date, DA.id
             """
 
         case 'Activation Editing':

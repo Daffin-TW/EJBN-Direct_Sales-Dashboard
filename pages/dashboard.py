@@ -1,5 +1,5 @@
 from modules import (
-    init_configuration, init_sidebar, init_content,
+    init_configuration, init_sidebar, init_content, filter_dashboard,
     fetch_data, visualization as vis
 )
 from streamlit import session_state as ss
@@ -22,28 +22,26 @@ def first_row(data: pd.DataFrame):
             vis.ordertype_linechart(data)
 
         with col2.container(border=True):
-            vis.revenue_linechart(data)
+            vis.revenue_areachart(data)
 
         with col3.container(border=True):
             vis.product_barchart(data)
 
 def second_row(data: pd.DataFrame):
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns((2))
     
     with st.container():
         with col1.container(border=True):
-            vis.gacpp_barchart(data, 'GA')
+            vis.gacpp_barchart(data)
 
         with col2.container(border=True):
-            vis.gacpp_barchart(data, 'CPP')
-
-        with col3.container(border=True):
             vis.revenue_barchart(data)
 
 
 initialization()
 
-activation_data = fetch_data('Activation')
+filter_query = filter_dashboard('Daily Activation')
+activation_data = fetch_data('Activation', filter_query).reset_index()
 
 if not activation_data.empty:
     first_row(activation_data)
@@ -51,6 +49,6 @@ if not activation_data.empty:
 else:
     message = """
         Tidak ditemukan data pada database aktivasi. Silahkan mengisi data
-        di halaman database pada tabel **Daily Activation**
+        di halaman database pada tabel **Daily Activation**.
     """
     st.warning(message, icon='⚠')
