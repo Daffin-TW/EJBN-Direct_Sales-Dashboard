@@ -98,7 +98,9 @@ class visualization:
 
         fig = px.line(
             order_type, x='Tanggal', y='Jumlah Aktivasi', color='Tipe Order',
-            color_discrete_sequence=['#FF8225', '#7AB2D3'],
+            color_discrete_sequence=['#FF8225', '#7AB2D3'], hover_data={
+                'Tanggal': False
+            }
         )
         fig.update_layout(
             hovermode='x unified', legend=dict(
@@ -135,7 +137,8 @@ class visualization:
 
         fig = px.line(
             revenue, x='Tanggal', y='Revenue',
-            color_discrete_sequence=['#CC2B52']
+            color_discrete_sequence=['#CC2B52'],
+            hover_data={'Tanggal': False}
         )
         fig.update_layout(
             yaxis_tickprefix='Rp',
@@ -172,7 +175,7 @@ class visualization:
                 'Tipe Order': [
                     'Change Postpaid Plan', 'Migration', 'New Registration'
                 ]
-            }
+            }, hover_data={'Produk & Tenure': False}, hover_name='Produk & Tenure'
         )
         fig.update_layout(
             barcornerradius='20%',
