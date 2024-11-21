@@ -1,6 +1,7 @@
 from streamlit import session_state as ss
 from datetime import datetime, timedelta, date
-from .database import fetch_data
+from plotly.subplots import make_subplots
+import plotly.graph_objects as go
 import plotly.express as px
 import streamlit as st
 import pandas as pd
@@ -8,7 +9,7 @@ import numpy as np
 
 
 class visualization:
-    @st.cache_data(ttl=300)
+    @st.cache_data(ttl=300, show_spinner=False)
     def ordertype_linechart(data: pd.DataFrame):
         df = data.copy()
 
@@ -64,7 +65,7 @@ class visualization:
 
         st.write(fig)
 
-    @st.cache_data(ttl=300)
+    @st.cache_data(ttl=300, show_spinner=False)
     def revenue_areachart(data: pd.DataFrame):
         df = data.copy()
 
@@ -103,7 +104,7 @@ class visualization:
 
         st.write(fig)
 
-    @st.cache_data(ttl=300)
+    @st.cache_data(ttl=300, show_spinner=False)
     def product_barchart(data: pd.DataFrame):
         df = data.copy()
 
@@ -148,7 +149,7 @@ class visualization:
 
         st.write(fig)
 
-    @st.cache_data(ttl=300)
+    @st.cache_data(ttl=300, show_spinner=False)
     def revenue_barchart(data: tuple[pd.DataFrame]):
         df_act, df_tar = data[0].copy(), data[1].copy()
 
@@ -163,47 +164,52 @@ class visualization:
             }, inplace=True)
         
         df_tar['target_date'] = pd.to_datetime(df_tar['target_date'])
-        df_tar['target_date'] = df_tar['target_date'] + timedelta(29)
+        df_tar['target_date'] = df_tar['target_date'] + timedelta(30)
         df_tar = df_tar.groupby('target_date').sum().reset_index()
         df_tar.rename(columns={
                 'target_date': 'Tanggal',
-                'target_ga': 'Target GA',
-                'target_cpp': 'Target CPP',
                 'target_revenue': 'Target Revenue'
             }, inplace=True)
         df_tar.replace(0, np.nan, inplace=True)
 
-        fig_rev = px.scatter(
+        fig = px.scatter(
             df_tar, x='Tanggal', y='Target Revenue',
-            color_discrete_sequence=['red'], text='Target Revenue',
+            color_discrete_sequence=['red'], text='Target Revenue'
         )
-        fig_rev.update_traces(
+        fig.update_traces(
+            legendgrouptitle_text='Target',
+            legendgroup='group',
+            name='Target Revenue',
+            showlegend=True,
             textposition='bottom right',
             marker_size=10,
             marker_symbol='diamond-wide',
-            hovertemplate='%{x} <br>Target Revenue: %{y}'
+            hovertemplate='Rp%{y:,}',
+            texttemplate='Rp%{y:,}',
+            textfont=dict(color='black')
         )
 
         main_fig = px.bar(
-            df_act, x='Tanggal', y='Revenue'
+            df_act, x='Tanggal', y='Revenue',
+            color_discrete_sequence=['orange']
         )
-        main_fig.add_trace(
-            fig_rev.data[0]
-        )
+        main_fig.update_traces(hovertemplate='Avhieve : Rp%{y:,}')
+        main_fig.add_trace(fig.data[0])
         main_fig.update_layout(
+            yaxis_tickformat=',',
             barcornerradius='20%',
-            yaxis_tickprefix='Rp',
-            yaxis_tickformat=',.1d',
-            dragmode='pan'
+            dragmode='pan',
+            hovermode='x',
         )
         main_fig.update_xaxes(
-            tickvals = df_act['Tanggal'], dtick='M1', tickformat='%b %Y'
+            tickvals = df_act['Tanggal'],
+            dtick='M1', tickformat='%b %Y'
         )
         main_fig.update_yaxes(fixedrange=True)
 
         st.write(main_fig)
 
-    @st.cache_data(ttl=300)
+    @st.cache_data(ttl=300, show_spinner=False)
     def gacpp_barchart(data: tuple[pd.DataFrame]):
         df_act, df_tar = data[0].copy(), data[1].copy()
 
@@ -225,45 +231,47 @@ class visualization:
             }, inplace=True)
 
         df_tar['target_date'] = pd.to_datetime(df_tar['target_date'])
-        df_tar['target_date'] = df_tar['target_date'] + timedelta(29)
+        df_tar['target_date'] = df_tar['target_date'] + timedelta(30)
         df_tar = df_tar.groupby('target_date').sum().reset_index()
         df_tar.rename(columns={
                 'target_date': 'Tanggal',
                 'target_ga': 'Target GA',
-                'target_cpp': 'Target CPP',
-                'target_revenue': 'Target Revenue'
+                'target_cpp': 'Target CPP'
             }, inplace=True)
+        df_tar = df_tar.melt(
+            'Tanggal', ['Target GA', 'Target CPP'],
+            var_name='Tipe Order', value_name='Jumlah Aktivasi'
+        )
         df_tar.replace(0, np.nan, inplace=True)
 
-        fig_ga = px.scatter(
-            df_tar, x='Tanggal', y='Target GA',
-            color_discrete_sequence=['red'], text='Target GA',
+        fig = px.scatter(
+            df_tar, x='Tanggal', y='Jumlah Aktivasi', color='Tipe Order',
+            color_discrete_sequence=['red'], text='Jumlah Aktivasi'
         )
-        fig_ga.update_traces(
+        fig.update_traces(
+            legendgrouptitle_text='Target',
+            legendgroup='group',
+            showlegend=True,
             textposition='bottom right',
             marker_size=10,
             marker_symbol='diamond-wide',
-            hovertemplate='%{x} <br>Target GA: %{y}'
-        )
-        fig_cpp = px.scatter(
-            df_tar, x='Tanggal', y='Target CPP',
-            color_discrete_sequence=['red'], text='Target CPP',
-        )
-        fig_cpp.update_traces(
-            textposition='bottom right',
-            marker_size=10,
-            marker_symbol='diamond-wide',
-            hovertemplate='%{x} <br>Target CPP: %{y}'
+            hovertemplate='%{y}',
+            textfont=dict(color='black')
         )
 
         main_fig = px.bar(
             df_act, x='Tanggal', y='Jumlah Aktivasi',
-            facet_col='Tipe Order'
+            facet_col='Tipe Order',
+            color_discrete_sequence=['orange']
         )
-        main_fig.add_traces(
-            [fig_ga.data[0], fig_cpp.data[0]], rows=[1, 1], cols=[1, 2]
+        main_fig.update_traces(hovertemplate='Achieve : %{y}')
+        main_fig.add_trace(fig.data[0], row=1, col=1)
+        main_fig.add_trace(fig.data[1], row=1, col=2)
+        main_fig.update_layout(
+            barcornerradius='20%',
+            dragmode='pan',
+            hovermode='x'
         )
-        main_fig.update_layout(barcornerradius='20%', dragmode='pan')
         main_fig.update_xaxes(
             showline=True,
             tickvals = df_act['Tanggal'],
