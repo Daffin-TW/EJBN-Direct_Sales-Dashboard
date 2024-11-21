@@ -6,8 +6,9 @@ import streamlit as st
 import pandas as pd
 
 class visualization:
-    def revenue_barchart():
-        df = fetch_data('Activation').copy()
+    def revenue_barchart(data):
+        df = data.copy()
+
         df['activation_date'] = pd.to_datetime(df['activation_date'])
 
         revenue = df.groupby(
@@ -33,8 +34,9 @@ class visualization:
 
         st.write(fig)
 
-    def gacpp_barchart(order_type: str):
-        df = fetch_data('Activation').copy()
+    def gacpp_barchart(data, order_type: str):
+        df = data.copy()
+        
         order_type_rename = {
             'Change Postpaid Plan': 'CPP',
             'Migration': 'GA',
@@ -63,8 +65,9 @@ class visualization:
 
         st.write(fig)
 
-    def ordertype_linechart():
-        df = fetch_data('Activation').copy()
+    def ordertype_linechart(data):
+        df = data.copy()
+
         order_type_rename = {
             'Change Postpaid Plan': 'CPP',
             'Migration': 'GA',
@@ -81,8 +84,8 @@ class visualization:
                 'count': 'Jumlah Aktivasi'
             }, inplace=True)
         
-        maximum = int(order_type['Tanggal'].max().month)
-        minimum = int(order_type['Tanggal'].min().month)
+        maximum = order_type['Tanggal'].max().month
+        minimum = order_type['Tanggal'].min().month
         line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
 
         fig = px.line(
@@ -104,8 +107,10 @@ class visualization:
 
         st.write(fig)
 
-    def revenue_linechart():
-        df = fetch_data('Activation').copy()
+    def revenue_linechart(data):
+        df = data.copy()
+
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
         revenue = df.groupby(
                 'activation_date'
             )['guaranteed_revenue'].sum().reset_index()
@@ -114,8 +119,8 @@ class visualization:
                 'guaranteed_revenue': 'Revenue'
             }, inplace=True)
         
-        maximum = int(revenue['Tanggal'].max().month)
-        minimum = int(revenue['Tanggal'].min().month)
+        maximum = revenue['Tanggal'].max().month
+        minimum = revenue['Tanggal'].min().month
         line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
 
         fig = px.line(
@@ -135,8 +140,9 @@ class visualization:
 
         st.write(fig)
 
-    def product_barchart():
-        df = fetch_data('Activation').copy()
+    def product_barchart(data):
+        df = data.copy()
+
         df['product_tenure'] = (df['product'] + ' - ' + df['tenure'].astype(str))
         product = df.value_counts(subset=['product_tenure', 'order_type'])
         product = product.reset_index()

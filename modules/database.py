@@ -1,4 +1,3 @@
-from mysql.connector.abstracts import MySQLCursorAbstract as db_cur
 from streamlit import session_state as ss
 from streamlit import secrets as sc
 from warnings import filterwarnings
@@ -804,13 +803,15 @@ def execute_sql_query(sql: list):
     ss.db_is_loading = True
 
     try:
-        cursor: db_cur = ss.db_connection.cursor()
+        db_conn = connect_db()
+        cursor = db_conn.cursor()
 
         for query in sql:
             cursor.execute(query)
-            ss.db_connection.commit()
+            db_conn.commit()
 
         cursor.close()
+        db_conn.close()
         st.cache_data.clear()
         ss.db_is_loading = False
 
@@ -818,6 +819,7 @@ def execute_sql_query(sql: list):
     
     except Exception as e:
         cursor.close()
+        db_conn.close()
         st.cache_data.clear()
         ss.db_is_loading = False
 
