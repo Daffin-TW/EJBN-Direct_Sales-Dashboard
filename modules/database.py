@@ -85,6 +85,19 @@ def fetch_data(table: str, filter_query: str = ''):
                 {filter_query}
                 """
 
+        case 'RCE Target':
+            sql = f"""
+                SELECT
+                    RT.id, RT.target_date, RT.target_ga, RT.target_cpp,
+                    RT.target_revenue
+                FROM RceTarget AS RT
+                    INNER JOIN Rce AS R ON RT.rce_id = R.id
+                    INNER JOIN Person AS P ON R.rce_nik = P.nik
+                {filter_query}
+                ORDER BY
+                    RT.id
+            """
+
         case 'RCE Target Editing':
             sql = f"""
                 SELECT

@@ -27,7 +27,7 @@ def first_row(data: pd.DataFrame):
         with col3.container(border=True):
             vis.product_barchart(data)
 
-def second_row(data: pd.DataFrame):
+def second_row(data: tuple[pd.DataFrame]):
     col1, col2 = st.columns((2))
     
     with st.container():
@@ -41,11 +41,13 @@ def second_row(data: pd.DataFrame):
 initialization()
 
 filter_query = filter_dashboard('Daily Activation')
-activation_data = fetch_data('Activation', filter_query).reset_index()
+
+activation_data = fetch_data('Activation', filter_query['act']).reset_index()
+target_data = fetch_data('RCE Target', filter_query['tar']).reset_index()
 
 if not activation_data.empty:
     first_row(activation_data)
-    second_row(activation_data)
+    second_row((activation_data, target_data))
 else:
     message = """
         Tidak ditemukan data pada database aktivasi. Silahkan mengisi data

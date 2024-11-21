@@ -198,10 +198,13 @@ def filter_edit(table: str):
     return query
 
 def filter_dashboard(table: str):
-    sql = []
-
+    query = dict()
+    
     match table:
         case 'Daily Activation':
+            sql = dict()
+            sql['act'], sql['tar'] = list(), list()
+
             with st.expander('**Filter**', icon='🔎', expanded=True):
                 row1_col1, row1_col2 = st.columns(2)
                 row2_col1, row2_col2 = st.columns(2)
@@ -216,29 +219,34 @@ def filter_dashboard(table: str):
                 date = filter_date()
 
             if name:
-                sql.append(f"P.`name` LIKE '%{name}%'")
+                sql['act'].append(f"P.`name` LIKE '%{name}%'")
             if rce:
-                sql.append(f'R.id IN {rce}')
+                sql['act'].append(f'R.id IN {rce}')
+                sql['tar'].append(f'R.id IN {rce}')
             if channel:
-                sql.append(f'R.channel_code IN {channel}')
+                sql['act'].append(f'R.channel_code IN {channel}')
+                sql['tar'].append(f'R.channel_code IN {channel}')
             if len(date) == 1:
-                sql.append(f"DA.activation_date >= '{date[0]}'")
+                sql['act'].append(f"DA.activation_date >= '{date[0]}'")
+                sql['tar'].append(f"""
+                    MONTH(RT.target_date) >= MONTH('{date[0]}')
+                """)
             elif len(date) == 2:
-                sql.append(f"""(
-                DA.activation_date BETWEEN '{date[0]}' AND '{date[1]}'
-            )""")
-
-            if sql:
-                query = 'WHERE ' + ' AND '.join(sql)
-            else:
-                query = ''
+                sql['act'].append(f"""(
+                    DA.activation_date BETWEEN '{date[0]}' AND '{date[1]}'
+                )""")
+                sql['tar'].append(f"""
+                    MONTH(RT.target_date) BETWEEN MONTH('{date[0]}') AND
+                    MONTH('{date[1]}')
+                """)
             
         case _:
             st.error(f'Tidak ada tabel dengan nama {table}')
 
-    if sql:
-        query = 'WHERE ' + ' AND '.join(sql)
-    else:
-        query = ''
+    for key, value in sql.items():
+        if value:
+            query[key] = 'WHERE ' + ' AND '.join(value)
+        else:
+            query[key] = ''
 
     return query
