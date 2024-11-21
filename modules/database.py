@@ -239,7 +239,7 @@ def activation_upload(data: pd.DataFrame):
             VALUES
                 {insert_activation};
         """)
-    
+
     return sql
 
 def edit_database(table: str, filter_query: str = '', data: pd.DataFrame = None):

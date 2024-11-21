@@ -17,6 +17,9 @@ def initialization():
 
     if not ss.get('edit_selection', False):
         ss.edit_selection = 'Channel'
+    if ss.get('dialog_message', False):
+        st.toast('Perubahan Berhasil disimpan')
+        ss.dialog_message = False
 
 def current_table():
     button_edit_database = {
@@ -37,6 +40,7 @@ def apply_button_click(sql: list, dialog: bool = False):
     ss.done_editing = True
 
     if dialog:
+        ss.dialog_message = True
         return None
 
     if result[0]:
@@ -110,7 +114,7 @@ def upload_file():
     )
     
     sql = edit_database('Daily Activation', '', df)
-    
+
     if apply_button(sql, dialog=True):
         st.rerun()
 

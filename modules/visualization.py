@@ -6,11 +6,11 @@ import streamlit as st
 import pandas as pd
 
 class visualization:
-    def revenue_barchart(data):
+    def revenue_barchart(data: pd.DataFrame):
         df = data.copy()
 
         df['activation_date'] = pd.to_datetime(df['activation_date'])
-
+    
         revenue = df.groupby(
                 pd.Grouper(key='activation_date', freq='ME')
             )['guaranteed_revenue'].sum().reset_index()
@@ -34,9 +34,8 @@ class visualization:
 
         st.write(fig)
 
-    def gacpp_barchart(data, order_type: str):
+    def gacpp_barchart(data: pd.DataFrame, order_type: str):
         df = data.copy()
-        
         order_type_rename = {
             'Change Postpaid Plan': 'CPP',
             'Migration': 'GA',
@@ -65,7 +64,7 @@ class visualization:
 
         st.write(fig)
 
-    def ordertype_linechart(data):
+    def ordertype_linechart(data: pd.DataFrame):
         df = data.copy()
 
         order_type_rename = {
@@ -75,18 +74,27 @@ class visualization:
         }
         df['order_type'] = df['order_type'].replace(order_type_rename)
         df['activation_date'] = pd.to_datetime(df['activation_date'])
+
         order_type = df.groupby(
                 'activation_date'
             )['order_type'].value_counts().reset_index()
         order_type.rename(columns={
                 'activation_date': 'Tanggal',
-                'order_type': 'Tipe Order',
-                'count': 'Jumlah Aktivasi'
+                'order_type': 'Tipe Order'
             }, inplace=True)
         
-        maximum = order_type['Tanggal'].max().month
-        minimum = order_type['Tanggal'].min().month
-        line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
+        minimum = order_type['Tanggal'].min()
+        maximum = order_type['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        order_type = order_type.pivot(
+            index='Tanggal', columns='Tipe Order', values='count'
+        )
+        order_type = order_type.asfreq('D').reset_index()
+        order_type = order_type.melt(
+            id_vars='Tanggal', value_vars=['GA', 'CPP'],
+            value_name='Jumlah Aktivasi'
+        )
 
         fig = px.line(
             order_type, x='Tanggal', y='Jumlah Aktivasi', color='Tipe Order',
@@ -107,7 +115,7 @@ class visualization:
 
         st.write(fig)
 
-    def revenue_linechart(data):
+    def revenue_linechart(data: pd.DataFrame):
         df = data.copy()
 
         df['activation_date'] = pd.to_datetime(df['activation_date'])
@@ -119,9 +127,11 @@ class visualization:
                 'guaranteed_revenue': 'Revenue'
             }, inplace=True)
         
-        maximum = revenue['Tanggal'].max().month
-        minimum = revenue['Tanggal'].min().month
-        line = [f'2024-{i+1}-1' for i in range(minimum, maximum)]
+        minimum = revenue['Tanggal'].min()
+        maximum = revenue['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        revenue = revenue.set_index('Tanggal').asfreq('D').reset_index()
 
         fig = px.line(
             revenue, x='Tanggal', y='Revenue',
@@ -140,7 +150,7 @@ class visualization:
 
         st.write(fig)
 
-    def product_barchart(data):
+    def product_barchart(data: pd.DataFrame):
         df = data.copy()
 
         df['product_tenure'] = (df['product'] + ' - ' + df['tenure'].astype(str))
