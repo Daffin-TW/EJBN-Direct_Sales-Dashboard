@@ -44,7 +44,8 @@ class visualization:
 
         fig = px.line(
             df, x='Tanggal', y='Jumlah Aktivasi', color='Tipe Order',
-            color_discrete_sequence=['#FF8225', '#7AB2D3'], hover_data={
+            color_discrete_sequence=['#FF8225', '#7AB2D3'], height=400,
+            hover_data={
                 'Tanggal': False
             }
         )
@@ -85,7 +86,7 @@ class visualization:
         df = df.set_index('Tanggal').asfreq('D').reset_index()
 
         fig = px.area(
-            df, x='Tanggal', y='Revenue',
+            df, x='Tanggal', y='Revenue', height=400,
             color_discrete_sequence=['#CC2B52'],
             hover_data={'Tanggal': False}
         )
@@ -121,7 +122,7 @@ class visualization:
 
         fig = px.bar(
             df, x='Jumlah Aktivasi', y='Produk & Tenure',
-            color='Tipe Order', text_auto=True,
+            color='Tipe Order', text_auto=True,height=400,
             color_discrete_sequence=['#DBD3D3', '#FF7F3E', '#0D92F4'],
             category_orders={
                 'Tipe Order': [
@@ -153,28 +154,32 @@ class visualization:
     def revenue_barchart(data: tuple[pd.DataFrame]):
         df_act, df_tar = data[0].copy(), data[1].copy()
 
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'target_revenue': 'Target',
+            'guaranteed_revenue': 'Achieve'
+        }
+
         df_act['activation_date'] = pd.to_datetime(df_act['activation_date'])
-    
         df_act = df_act.groupby(
                 pd.Grouper(key='activation_date', freq='ME')
             )['guaranteed_revenue'].sum().reset_index()
-        df_act.rename(columns={
-                'activation_date': 'Tanggal',
-                'guaranteed_revenue': 'Revenue'
-            }, inplace=True)
+        df_act['activation_date'] = df_act['activation_date'].map(
+            lambda dt: dt.replace(day=1)
+        )
+        df_act.rename(columns=columns_rename, inplace=True)
+
+        df_tar.rename(columns=columns_rename, inplace=True)
+        df_tar['Tanggal'] = pd.to_datetime(df_tar['Tanggal'])
+        df_tar = df_tar.groupby(['Tanggal']).sum().reset_index()
+        df_tar['Target'] = df_tar['Target'].replace(0, np.nan)
         
-        df_tar['target_date'] = pd.to_datetime(df_tar['target_date'])
-        df_tar['target_date'] = df_tar['target_date'] + timedelta(30)
-        df_tar = df_tar.groupby('target_date').sum().reset_index()
-        df_tar.rename(columns={
-                'target_date': 'Tanggal',
-                'target_revenue': 'Target Revenue'
-            }, inplace=True)
-        df_tar.replace(0, np.nan, inplace=True)
+        df = pd.merge(df_act, df_tar, how='outer', on='Tanggal')
 
         fig = px.scatter(
-            df_tar, x='Tanggal', y='Target Revenue',
-            color_discrete_sequence=['red'], text='Target Revenue'
+            df, x='Tanggal', y='Target',
+            color_discrete_sequence=['red'], text='Target'
         )
         fig.update_traces(
             legendgrouptitle_text='Target',
@@ -184,13 +189,13 @@ class visualization:
             textposition='bottom right',
             marker_size=10,
             marker_symbol='diamond-wide',
-            hovertemplate='Rp%{y:,}',
+            hovertemplate='Target: Rp%{y:,}',
             texttemplate='Rp%{y:,}',
             textfont=dict(color='black')
         )
 
         main_fig = px.bar(
-            df_act, x='Tanggal', y='Revenue',
+            df_act, x='Tanggal', y='Achieve', height=400,
             color_discrete_sequence=['orange']
         )
         main_fig.update_traces(hovertemplate='Avhieve : Rp%{y:,}')
@@ -199,12 +204,9 @@ class visualization:
             yaxis_tickformat=',',
             barcornerradius='20%',
             dragmode='pan',
-            hovermode='x',
+            hovermode='x'
         )
-        main_fig.update_xaxes(
-            tickvals = df_act['Tanggal'],
-            dtick='M1', tickformat='%b %Y'
-        )
+        main_fig.update_xaxes(dtick='M1', tickformat='%b %Y')
         main_fig.update_yaxes(fixedrange=True)
 
         st.write(main_fig)
@@ -213,40 +215,46 @@ class visualization:
     def gacpp_barchart(data: tuple[pd.DataFrame]):
         df_act, df_tar = data[0].copy(), data[1].copy()
 
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'order_type': 'Tipe Order',
+            'count': 'Achieve'
+        }
+
         order_type_rename = {
             'Change Postpaid Plan': 'CPP',
             'Migration': 'GA',
-            'New Registration': 'GA'
+            'New Registration': 'GA',
+            'target_ga': 'GA',
+            'target_cpp': 'CPP'
         }
+
         df_act['order_type'] = df_act['order_type'].replace(order_type_rename)
         df_act['activation_date'] = pd.to_datetime(df_act['activation_date'])
-
         df_act = df_act.groupby(
                 pd.Grouper(key='activation_date', freq='ME')
             )['order_type'].value_counts().reset_index()
-        df_act.rename(columns={
-                'activation_date': 'Tanggal',
-                'order_type': 'Tipe Order',
-                'count': 'Jumlah Aktivasi'
-            }, inplace=True)
-
-        df_tar['target_date'] = pd.to_datetime(df_tar['target_date'])
-        df_tar['target_date'] = df_tar['target_date'] + timedelta(30)
-        df_tar = df_tar.groupby('target_date').sum().reset_index()
-        df_tar.rename(columns={
-                'target_date': 'Tanggal',
-                'target_ga': 'Target GA',
-                'target_cpp': 'Target CPP'
-            }, inplace=True)
-        df_tar = df_tar.melt(
-            'Tanggal', ['Target GA', 'Target CPP'],
-            var_name='Tipe Order', value_name='Jumlah Aktivasi'
+        df_act['activation_date'] = df_act['activation_date'].map(
+            lambda dt: dt.replace(day=1)
         )
-        df_tar.replace(0, np.nan, inplace=True)
+        df_act.rename(columns=columns_rename, inplace=True)
+
+        df_tar.rename(columns=columns_rename, inplace=True)
+        df_tar['Tanggal'] = pd.to_datetime(df_tar['Tanggal'])
+        df_tar = df_tar.melt(
+            'Tanggal', ('target_ga', 'target_cpp'),
+            'Tipe Order', 'Target'
+        )
+        df_tar = df_tar.groupby(['Tanggal', 'Tipe Order']).sum().reset_index()
+        df_tar['Tipe Order'] = df_tar['Tipe Order'].replace(order_type_rename)
+        df_tar['Target'] = df_tar['Target'].replace(0, np.nan)
+
+        df = pd.merge(df_act, df_tar, how='outer', on=['Tanggal', 'Tipe Order'])
 
         fig = px.scatter(
-            df_tar, x='Tanggal', y='Jumlah Aktivasi', color='Tipe Order',
-            color_discrete_sequence=['red'], text='Jumlah Aktivasi'
+            df, x='Tanggal', y='Target', color='Tipe Order',
+            color_discrete_sequence=['red'], text='Target'
         )
         fig.update_traces(
             legendgrouptitle_text='Target',
@@ -255,18 +263,18 @@ class visualization:
             textposition='bottom right',
             marker_size=10,
             marker_symbol='diamond-wide',
-            hovertemplate='%{y}',
+            hovertemplate='Target: %{y}',
             textfont=dict(color='black')
         )
 
         main_fig = px.bar(
-            df_act, x='Tanggal', y='Jumlah Aktivasi',
-            facet_col='Tipe Order',
+            df_act, x='Tanggal', y='Achieve',
+            facet_col='Tipe Order', height=400,
             color_discrete_sequence=['orange']
         )
         main_fig.update_traces(hovertemplate='Achieve : %{y}')
-        main_fig.add_trace(fig.data[0], row=1, col=1)
-        main_fig.add_trace(fig.data[1], row=1, col=2)
+        main_fig.add_trace(fig.data[0], row=1, col=2)
+        main_fig.add_trace(fig.data[1], row=1, col=1)
         main_fig.update_layout(
             barcornerradius='20%',
             dragmode='pan',
@@ -274,7 +282,6 @@ class visualization:
         )
         main_fig.update_xaxes(
             showline=True,
-            tickvals = df_act['Tanggal'],
             dtick='M1', tickformat='%b %Y'
         )
         main_fig.update_yaxes(fixedrange=True)

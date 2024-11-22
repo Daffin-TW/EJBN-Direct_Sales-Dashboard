@@ -40,7 +40,8 @@ def second_row(data: tuple[pd.DataFrame]):
 
 initialization()
 
-filter_query = filter_dashboard('Daily Activation')
+with st.sidebar.expander('**Filter**', icon='🔍', expanded=True):
+    filter_query = filter_dashboard('Daily Activation')
 
 activation_data = fetch_data('Activation', filter_query['act']).reset_index()
 target_data = fetch_data('RCE Target', filter_query['tar']).reset_index()

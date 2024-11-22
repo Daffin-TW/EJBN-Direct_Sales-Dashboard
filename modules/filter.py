@@ -205,18 +205,10 @@ def filter_dashboard(table: str):
             sql = dict()
             sql['act'], sql['tar'] = list(), list()
 
-            with st.expander('**Filter**', icon='🔎', expanded=True):
-                row1_col1, row1_col2 = st.columns(2)
-                row2_col1, row2_col2 = st.columns(2)
-
-            with row1_col1:
-                name = filter_name()
-            with row1_col2:
-                rce = filter_rce()
-            with row2_col1:
-                channel = filter_channel()
-            with row2_col2:
-                date = filter_date()
+            name = filter_name()
+            rce = filter_rce()
+            channel = filter_channel()
+            date = filter_date()
 
             if name:
                 sql['act'].append(f"P.`name` LIKE '%{name}%'")
