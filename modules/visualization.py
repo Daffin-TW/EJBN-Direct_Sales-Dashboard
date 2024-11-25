@@ -8,7 +8,7 @@ import pandas as pd
 import numpy as np
 
 
-class visualization:
+class general:
     @st.cache_data(ttl=300, show_spinner=False)
     def ordertype_linechart(data: pd.DataFrame):
         df = data.copy()
@@ -29,10 +29,6 @@ class visualization:
                 'order_type': 'Tipe Order'
             }, inplace=True)
         
-        minimum = df['Tanggal'].min()
-        maximum = df['Tanggal'].max()
-        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
-
         df = df.pivot(
             index='Tanggal', columns='Tipe Order', values='count'
         )
@@ -41,6 +37,10 @@ class visualization:
             id_vars='Tanggal', value_vars=['GA', 'CPP'],
             value_name='Jumlah Aktivasi'
         )
+
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
 
         fig = px.line(
             df, x='Tanggal', y='Jumlah Aktivasi', color='Tipe Order',
@@ -78,12 +78,11 @@ class visualization:
                 'activation_date': 'Tanggal',
                 'guaranteed_revenue': 'Revenue'
             }, inplace=True)
-        
+        df = df.set_index('Tanggal').asfreq('D').reset_index()
+
         minimum = df['Tanggal'].min()
         maximum = df['Tanggal'].max()
         line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
-
-        df = df.set_index('Tanggal').asfreq('D').reset_index()
 
         fig = px.area(
             df, x='Tanggal', y='Revenue', height=400,
@@ -287,3 +286,106 @@ class visualization:
         main_fig.update_yaxes(fixedrange=True)
 
         st.write(main_fig)
+
+class rce_comparison:
+    # @st.cache_data(ttl=300, show_spinner=False)
+    def ordertype_linechart(data: pd.DataFrame):
+        df = data.copy()
+
+        order_type_rename = {
+            'Change Postpaid Plan': 'CPP',
+            'Migration': 'GA',
+            'New Registration': 'GA'
+        }
+        df['order_type'] = df['order_type'].replace(order_type_rename)
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+
+        df = df.groupby(
+                ['activation_date', 'rce']
+            )['order_type'].value_counts().reset_index()
+        df.rename(columns={
+                'activation_date': 'Tanggal',
+                'order_type': 'Tipe Order',
+                'rce': 'RCE'
+            }, inplace=True)
+        df = df.pivot(
+            index=['Tanggal', 'RCE'], columns='Tipe Order', values='count'
+        )
+        df = df.unstack().asfreq('D').stack().reset_index()
+        df = df.melt(
+            id_vars=['Tanggal', 'RCE'], value_vars=['GA', 'CPP'],
+            value_name='count'
+        )
+        df['count'] = df['count'].fillna(0)
+        df['Jumlah Kumulatif Aktivasi'] = df.groupby(
+                ['RCE', 'Tipe Order']
+            )['count'].cumsum()
+
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        print(df.head(30))
+
+        fig = px.line(
+            df[df['Tipe Order'] == 'GA'], x='Tanggal', y='Jumlah Kumulatif Aktivasi',
+            color='RCE', height=400,
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        fig.update_layout(
+            hovermode='x unified',
+            dragmode='pan',
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                xanchor='left',
+                y=1
+            )
+        )
+        fig.update_xaxes(showline=True, showgrid=True)
+        fig.update_yaxes(fixedrange=True)
+        for i in line:
+            fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
+
+        st.write(fig)
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def revenue_areachart(data: pd.DataFrame):
+        df = data.copy()
+
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+        df = df.groupby(
+                'activation_date'
+            )['guaranteed_revenue'].sum().reset_index()
+        df.rename(columns={
+                'activation_date': 'Tanggal',
+                'guaranteed_revenue': 'Revenue'
+            }, inplace=True)
+        
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        df = df.set_index('Tanggal').asfreq('D').reset_index()
+
+        fig = px.area(
+            df, x='Tanggal', y='Revenue', height=400,
+            color_discrete_sequence=['#CC2B52'],
+            hover_data={'Tanggal': False}
+        )
+        fig.update_layout(
+            yaxis_tickprefix='Rp',
+            yaxis_tickformat=',.1d',
+            hovermode='x unified',
+            dragmode='pan'
+        )
+
+        fig.update_xaxes(showline=True)
+        fig.update_yaxes(fixedrange=True)
+
+        for i in line:
+            fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
+
+        st.write(fig)

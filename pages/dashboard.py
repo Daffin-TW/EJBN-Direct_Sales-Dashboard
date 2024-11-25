@@ -19,33 +19,33 @@ def d1_first_row(data: pd.DataFrame):
     
     with st.container():
         with col1.container(border=True):
-            vis.ordertype_linechart(data)
+            vis.general.ordertype_linechart(data)
 
         with col2.container(border=True):
-            vis.revenue_areachart(data)
+            vis.general.revenue_areachart(data)
 
         with col3.container(border=True):
-            vis.product_barchart(data)
+            vis.general.product_barchart(data)
 
 def d1_second_row(data: tuple[pd.DataFrame]):
     col1, col2 = st.columns((2))
     
     with st.container():
         with col1.container(border=True):
-            vis.gacpp_barchart(data)
+            vis.general.gacpp_barchart(data)
 
         with col2.container(border=True):
-            vis.revenue_barchart(data)
+            vis.general.revenue_barchart(data)
 
 def d2_first_row(data: pd.DataFrame):
     col1, col2, = st.columns(2)
     
     with st.container():
         with col1.container(border=True):
-            vis.ordertype_linechart(data)
+            vis.rce_comparison.ordertype_linechart(data)
 
         with col2.container(border=True):
-            vis.revenue_areachart(data)
+            vis.rce_comparison.revenue_areachart(data)
 
 
 initialization()
