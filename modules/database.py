@@ -187,7 +187,9 @@ def fetch_data_primary(table: str):
         
         case 'Rce Id Name':
             sql = """SELECT CONCAT(R.id, ': ', P.`name`) AS "RCE" FROM Rce AS R
-                        INNER JOIN Person AS P ON R.rce_nik = P.nik;"""
+                        INNER JOIN Person AS P ON R.rce_nik = P.nik
+                        ORDER BY R.id;
+                        """
         
         case 'Agent Id Name':
             sql = """SELECT CONCAT(

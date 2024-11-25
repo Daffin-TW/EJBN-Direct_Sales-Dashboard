@@ -8,13 +8,13 @@ import pandas as pd
 
 
 def initialization():
-    init_configuration()
+    init_configuration(sidebar='expanded')
 
     ss.navigation = '📊 dashboard'
     init_content()
     init_sidebar()
 
-def first_row(data: pd.DataFrame):
+def d1_first_row(data: pd.DataFrame):
     col1, col2, col3 = st.columns(3)
     
     with st.container():
@@ -27,7 +27,7 @@ def first_row(data: pd.DataFrame):
         with col3.container(border=True):
             vis.product_barchart(data)
 
-def second_row(data: tuple[pd.DataFrame]):
+def d1_second_row(data: tuple[pd.DataFrame]):
     col1, col2 = st.columns((2))
     
     with st.container():
@@ -37,21 +37,65 @@ def second_row(data: tuple[pd.DataFrame]):
         with col2.container(border=True):
             vis.revenue_barchart(data)
 
+def d2_first_row(data: pd.DataFrame):
+    col1, col2, = st.columns(2)
+    
+    with st.container():
+        with col1.container(border=True):
+            vis.ordertype_linechart(data)
+
+        with col2.container(border=True):
+            vis.revenue_areachart(data)
+
 
 initialization()
 
-with st.sidebar.expander('**Filter**', icon='🔍', expanded=True):
-    filter_query = filter_dashboard('Daily Activation')
+dashboard_options = (
+    'Umum', 'Perbandingan RCE'
+)
 
-activation_data = fetch_data('Activation', filter_query['act']).reset_index()
-target_data = fetch_data('RCE Target', filter_query['tar']).reset_index()
+with st.sidebar:
+    st.markdown('## Pilihan Dashboard')
+    st.selectbox(
+        'SelectBox Dashboard', dashboard_options, key='dashboard_selection',
+        placeholder='Pilih opsi dashboard', label_visibility='collapsed'
+    )
 
-if not activation_data.empty:
-    first_row(activation_data)
-    second_row((activation_data, target_data))
-else:
-    message = """
-        Tidak ditemukan data pada database aktivasi. Silahkan mengisi data
+match ss.dashboard_selection:
+    case 'Umum':
+        with st.spinner('Menghubungi database, mohon ditunggu...'):
+            with st.sidebar.expander('**Filter**', icon='🔍', expanded=True):
+                filter_query = filter_dashboard('General')
+
+        activation_data = fetch_data('Activation', filter_query['act']).reset_index()
+        target_data = fetch_data('RCE Target', filter_query['tar']).reset_index()
+
+        if not activation_data.empty:
+            ss.data_is_empty = False
+            d1_first_row(activation_data)
+            d1_second_row((activation_data, target_data))
+        else:
+            ss.data_is_empty = True
+            
+    case 'Perbandingan RCE':
+        with st.spinner('Menghubungi database, mohon ditunggu...'):
+            with st.sidebar.expander('**Filter**', icon='🔍', expanded=True):
+                filter_query = filter_dashboard('RCE Comparison')
+
+        activation_data = fetch_data('Activation', filter_query['act']).reset_index()
+
+        if not activation_data.empty:
+            ss.data_is_empty = False
+            d2_first_row(activation_data)
+        else:
+            ss.data_is_empty = True
+
+    case _:
+        f'Tidak ada pilihan dashboard {ss.dashboard_selection}'
+
+if ss.get('data_is_empty', False):
+    message = f"""
+        Tidak ditemukan data pada database. Silahkan mengisi data
         di halaman database pada tabel **Daily Activation**.
     """
     st.warning(message, icon='⚠')
