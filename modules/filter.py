@@ -59,6 +59,12 @@ def filter_active():
         'filter_status', options=status_opt, label_visibility='collapsed'
     )
 
+def filter_peragent():
+    # st.markdown('**Filter Per Agent**')
+    return st.checkbox(
+        '**Filter Rata-rata Per Agent**', key='filter_peragent',
+    )
+
 def filter_edit(table: str):
     sql = []
 

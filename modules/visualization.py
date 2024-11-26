@@ -292,7 +292,7 @@ class general:
 
 class rce_comparison:
     @st.cache_data(ttl=300, show_spinner=False)
-    def ordertype_linechart(data: pd.DataFrame):
+    def ordertype_linechart(data: pd.DataFrame, agent_filter):
         df = data.copy()
 
         order_type_rename = {
@@ -302,6 +302,8 @@ class rce_comparison:
         }
         df['order_type'] = df['order_type'].replace(order_type_rename)
         df['activation_date'] = pd.to_datetime(df['activation_date'])
+        df['Bulan'] = df['activation_date'].dt.month
+        agent = df.groupby(['Bulan', 'rce'])['agent_id'].nunique().reset_index()
 
         df = df.groupby(
                 ['activation_date', 'rce']
@@ -323,6 +325,15 @@ class rce_comparison:
         df['Jumlah Kumulatif Aktivasi'] = df.groupby(
                 ['RCE', 'Tipe Order']
             )['count'].cumsum()
+        df['Bulan'] = df['Tanggal'].dt.month
+        
+        if agent_filter:
+            df = df.merge(
+                agent, left_on=['Bulan', 'RCE'], right_on=['Bulan', 'rce']
+            )
+            df['Jumlah Kumulatif Aktivasi'] = (
+                df['Jumlah Kumulatif Aktivasi'] / df['agent_id']
+            )
 
         minimum = df['Tanggal'].min()
         maximum = df['Tanggal'].max()
@@ -341,7 +352,7 @@ class rce_comparison:
                 legendgroup=t.name.split(', ')[-1],
                 legendgrouptitle={'text': t.name.split(', ')[-1]},
                 name=t.name.split(', ')[0].split(':')[-1],
-                hovertemplate='%{y}'
+                hovertemplate='%{y:.0f}'
             )
         )
         fig.update_layout(
@@ -362,10 +373,12 @@ class rce_comparison:
         st.write(fig)
 
     @st.cache_data(ttl=300, show_spinner=False)
-    def revenue_areachart(data: pd.DataFrame):
+    def revenue_linechart(data: pd.DataFrame, agent_filter=False):
         df = data.copy()
 
         df['activation_date'] = pd.to_datetime(df['activation_date'])
+        df['Bulan'] = df['activation_date'].dt.month
+        agent = df.groupby(['Bulan', 'rce'])['agent_id'].nunique().reset_index()
 
         df = df.groupby(
                 ['activation_date', 'rce']
@@ -381,6 +394,13 @@ class rce_comparison:
         df['Kumulatif Revenue'] = df.groupby(
                 ['RCE']
             )['Kumulatif Revenue'].cumsum()
+        df['Bulan'] = df['Tanggal'].dt.month
+
+        if agent_filter:
+            df = df.merge(
+                agent, left_on=['Bulan', 'RCE'], right_on=['Bulan', 'rce']
+            )
+            df['Kumulatif Revenue'] = df['Kumulatif Revenue'] / df['agent_id']
 
         minimum = df['Tanggal'].min()
         maximum = df['Tanggal'].max()
