@@ -39,7 +39,7 @@ def d1_second_row(data: tuple[pd.DataFrame]):
             vis.general.product_barchart(data[0])
 
 def d2_first_row(data: pd.DataFrame, agent_filter: bool = False):
-    col1, col2, = st.columns(2)
+    col1, col2 = st.columns(2)
     
     with st.container():
         with col1.container(border=True):
@@ -47,6 +47,13 @@ def d2_first_row(data: pd.DataFrame, agent_filter: bool = False):
 
         with col2.container(border=True):
             vis.rce_comparison.revenue_linechart(data, agent_filter)
+
+def d2_second_row(data: pd.DataFrame, agent_filter: bool = False):
+    col1, col2 = st.columns(2)
+
+    with st.container():
+        with col1.container(border=True):
+            vis.rce_comparison.product_barchart(data, agent_filter)
 
 
 initialization()
@@ -80,6 +87,7 @@ match ss.dashboard_selection:
             ss.data_is_empty = False
             d1_first_row(activation_data)
             d1_second_row((activation_data, target_data))
+            
         else:
             ss.data_is_empty = True
             
@@ -100,6 +108,8 @@ match ss.dashboard_selection:
                 agent = filter_peragent()
 
             d2_first_row(activation_data, agent)
+            d2_second_row(activation_data, agent)
+
         else:
             ss.data_is_empty = True
 

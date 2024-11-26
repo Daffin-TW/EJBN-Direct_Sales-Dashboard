@@ -437,3 +437,50 @@ class rce_comparison:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
         st.write(fig)
+
+    # @st.cache_data(ttl=300, show_spinner=False)
+    def product_barchart(data: pd.DataFrame, agent_filter=False):
+        df = data.copy()
+
+        df['product_tenure'] = (df['product'] + ' - ' + df['tenure'].astype(str))
+        df = df.value_counts(subset=['rce', 'product_tenure', 'order_type'])
+        df = df.reset_index()
+
+        df.rename(columns={
+            'product_tenure': 'Produk & Tenure',
+            'count': 'Jumlah Aktivasi',
+            'order_type': 'Tipe Order',
+            'rce': 'RCE'
+        }, inplace=True)
+
+        fig = px.bar(
+            df, x='Jumlah Aktivasi', y='Produk & Tenure', facet_row='RCE',
+            color='Tipe Order', text_auto=True,height=700,
+            color_discrete_sequence=['#DBD3D3', '#FF7F3E', '#0D92F4'],
+            category_orders={
+                'Tipe Order': [
+                    'Change Postpaid Plan', 'Migration', 'New Registration'
+                ]
+            }, hover_data={'Produk & Tenure': False}, hover_name='Produk & Tenure'
+        )
+        fig.update_layout(
+            barcornerradius='20%',
+            dragmode='pan',
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                xanchor='left',
+                y=1
+            )
+        )
+        fig.update_yaxes(
+            range=[-0.5, 2.5], categoryorder='total descending',
+            minallowed=-0.5, matches=None
+        )
+        fig.update_xaxes(showgrid=True, minallowed=0, showline=True)
+        fig.update_traces(insidetextanchor='middle')
+        fig.for_each_annotation(
+            lambda a: a.update(text=a.text.split("=")[1])
+        )
+
+        st.write(fig)
