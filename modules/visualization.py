@@ -369,22 +369,22 @@ class rce_comparison:
             )['guaranteed_revenue'].sum().reset_index()
         df.rename(columns={
                 'activation_date': 'Tanggal',
-                'guaranteed_revenue': 'Revenue',
+                'guaranteed_revenue': 'Kumulatif Revenue',
                 'rce': 'RCE'
             }, inplace=True)
         df = df.set_index(['Tanggal', 'RCE'])
         df = df.unstack().asfreq('D').stack(future_stack=True).reset_index()
-        df['Revenue'] = df['Revenue'].fillna(0)
-        df['Revenue'] = df.groupby(
+        df['Kumulatif Revenue'] = df['Kumulatif Revenue'].fillna(0)
+        df['Kumulatif Revenue'] = df.groupby(
                 ['RCE']
-            )['Revenue'].cumsum()
+            )['Kumulatif Revenue'].cumsum()
 
         minimum = df['Tanggal'].min()
         maximum = df['Tanggal'].max()
         line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
 
         fig = px.line(
-            df, x='Tanggal', y='Revenue',
+            df, x='Tanggal', y='Kumulatif Revenue',
             color='RCE', height=500,
             color_discrete_sequence=px.colors.qualitative.Dark2,
             hover_data={
