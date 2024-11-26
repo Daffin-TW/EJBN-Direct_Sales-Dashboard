@@ -15,7 +15,7 @@ def initialization():
     init_sidebar()
 
 def d1_first_row(data: pd.DataFrame):
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
     
     with st.container():
         with col1.container(border=True):
@@ -24,11 +24,9 @@ def d1_first_row(data: pd.DataFrame):
         with col2.container(border=True):
             vis.general.revenue_areachart(data)
 
-        with col3.container(border=True):
-            vis.general.product_barchart(data)
 
 def d1_second_row(data: tuple[pd.DataFrame]):
-    col1, col2 = st.columns((2))
+    col1, col2, col3 = st.columns(3)
     
     with st.container():
         with col1.container(border=True):
@@ -36,6 +34,9 @@ def d1_second_row(data: tuple[pd.DataFrame]):
 
         with col2.container(border=True):
             vis.general.revenue_barchart(data)
+
+        with col3.container(border=True):
+            vis.general.product_barchart(data[0])
 
 def d2_first_row(data: pd.DataFrame):
     col1, col2, = st.columns(2)
@@ -60,6 +61,8 @@ with st.sidebar:
         'SelectBox Dashboard', dashboard_options, key='dashboard_selection',
         placeholder='Pilih opsi dashboard', label_visibility='collapsed'
     )
+
+st.markdown(f'### Dashboard {ss.dashboard_selection}')
 
 match ss.dashboard_selection:
     case 'Umum':

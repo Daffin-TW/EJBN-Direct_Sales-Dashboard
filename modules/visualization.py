@@ -274,6 +274,9 @@ class general:
         main_fig.update_traces(hovertemplate='Achieve : %{y}')
         main_fig.add_trace(fig.data[0], row=1, col=2)
         main_fig.add_trace(fig.data[1], row=1, col=1)
+        main_fig.for_each_annotation(
+            lambda a: a.update(text=a.text.split("=")[1])
+        )
         main_fig.update_layout(
             barcornerradius='20%',
             dragmode='pan',
