@@ -60,7 +60,7 @@ class general:
             )
         )
         fig.update_xaxes(showline=True, showgrid=True)
-        fig.update_yaxes(fixedrange=True)
+        fig.update_yaxes(minallowed=0)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
@@ -97,7 +97,7 @@ class general:
         )
 
         fig.update_xaxes(showline=True)
-        fig.update_yaxes(fixedrange=True)
+        fig.update_yaxes(minallowed=0)
 
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
@@ -206,7 +206,7 @@ class general:
             hovermode='x'
         )
         main_fig.update_xaxes(dtick='M1', tickformat='%b %Y')
-        main_fig.update_yaxes(fixedrange=True)
+        main_fig.update_yaxes(minallowed=0)
 
         st.write(main_fig)
 
@@ -283,12 +283,12 @@ class general:
             showline=True,
             dtick='M1', tickformat='%b %Y'
         )
-        main_fig.update_yaxes(fixedrange=True)
+        main_fig.update_yaxes(minallowed=0)
 
         st.write(main_fig)
 
 class rce_comparison:
-    # @st.cache_data(ttl=300, show_spinner=False)
+    @st.cache_data(ttl=300, show_spinner=False)
     def ordertype_linechart(data: pd.DataFrame):
         df = data.copy()
 
@@ -311,7 +311,7 @@ class rce_comparison:
         df = df.pivot(
             index=['Tanggal', 'RCE'], columns='Tipe Order', values='count'
         )
-        df = df.unstack().asfreq('D').stack().reset_index()
+        df = df.unstack().asfreq('D').stack(future_stack=True).reset_index()
         df = df.melt(
             id_vars=['Tanggal', 'RCE'], value_vars=['GA', 'CPP'],
             value_name='count'
@@ -325,14 +325,21 @@ class rce_comparison:
         maximum = df['Tanggal'].max()
         line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
 
-        print(df.head(30))
-
         fig = px.line(
-            df[df['Tipe Order'] == 'GA'], x='Tanggal', y='Jumlah Kumulatif Aktivasi',
-            color='RCE', height=400,
+            df, x='Tanggal', y='Jumlah Kumulatif Aktivasi',
+            color='RCE', height=500, line_dash='Tipe Order',
+            color_discrete_sequence=px.colors.qualitative.Dark2,
             hover_data={
                 'Tanggal': False
             }
+        )
+        fig.for_each_trace(
+            lambda t: t.update(
+                legendgroup=t.name.split(', ')[-1],
+                legendgrouptitle={'text': t.name.split(', ')[-1]},
+                name=t.name.split(', ')[0].split(':')[-1],
+                hovertemplate='%{y}'
+            )
         )
         fig.update_layout(
             hovermode='x unified',
@@ -345,7 +352,7 @@ class rce_comparison:
             )
         )
         fig.update_xaxes(showline=True, showgrid=True)
-        fig.update_yaxes(fixedrange=True)
+        fig.update_yaxes(minallowed=0)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
@@ -356,35 +363,53 @@ class rce_comparison:
         df = data.copy()
 
         df['activation_date'] = pd.to_datetime(df['activation_date'])
+
         df = df.groupby(
-                'activation_date'
+                ['activation_date', 'rce']
             )['guaranteed_revenue'].sum().reset_index()
         df.rename(columns={
                 'activation_date': 'Tanggal',
-                'guaranteed_revenue': 'Revenue'
+                'guaranteed_revenue': 'Revenue',
+                'rce': 'RCE'
             }, inplace=True)
-        
+        df = df.set_index(['Tanggal', 'RCE'])
+        df = df.unstack().asfreq('D').stack(future_stack=True).reset_index()
+        df['Revenue'] = df['Revenue'].fillna(0)
+        df['Revenue'] = df.groupby(
+                ['RCE']
+            )['Revenue'].cumsum()
+
         minimum = df['Tanggal'].min()
         maximum = df['Tanggal'].max()
         line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
 
-        df = df.set_index('Tanggal').asfreq('D').reset_index()
-
-        fig = px.area(
-            df, x='Tanggal', y='Revenue', height=400,
-            color_discrete_sequence=['#CC2B52'],
-            hover_data={'Tanggal': False}
+        fig = px.line(
+            df, x='Tanggal', y='Revenue',
+            color='RCE', height=500,
+            color_discrete_sequence=px.colors.qualitative.Dark2,
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        fig.for_each_trace(
+            lambda t: t.update(
+                name=t.name.split(':')[-1], hovertemplate='%{y}',
+            )
         )
         fig.update_layout(
+            hovermode='x unified',
+            dragmode='pan',
             yaxis_tickprefix='Rp',
             yaxis_tickformat=',.1d',
-            hovermode='x unified',
-            dragmode='pan'
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                xanchor='left',
+                y=1
+            )
         )
-
-        fig.update_xaxes(showline=True)
-        fig.update_yaxes(fixedrange=True)
-
+        fig.update_xaxes(showline=True, showgrid=True)
+        fig.update_yaxes(minallowed=0)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
