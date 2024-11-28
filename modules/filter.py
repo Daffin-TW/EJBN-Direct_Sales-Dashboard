@@ -235,24 +235,24 @@ def filter_dashboard(table: str):
                     MONTH('{date[1]}')
                 """)
 
-        case 'RCE Comparison':
-            sql = dict()
-            sql['act'] = list()
+    #     case 'RCE Comparison':
+    #         sql = dict()
+    #         sql['act'] = list()
 
-            rce = filter_rce()
-            channel = filter_channel()
-            date = filter_date()
+    #         rce = filter_rce()
+    #         channel = filter_channel()
+    #         date = filter_date()
 
-            if rce:
-                sql['act'].append(f'R.id IN {rce}')
-            if channel:
-                sql['act'].append(f'R.channel_code IN {channel}')
-            if len(date) == 1:
-                sql['act'].append(f"DA.activation_date >= '{date[0]}'")
-            elif len(date) == 2:
-                sql['act'].append(f"""(
-                    DA.activation_date BETWEEN '{date[0]}' AND '{date[1]}'
-                )""")
+    #         if rce:
+    #             sql['act'].append(f'R.id IN {rce}')
+    #         if channel:
+    #             sql['act'].append(f'R.channel_code IN {channel}')
+    #         if len(date) == 1:
+    #             sql['act'].append(f"DA.activation_date >= '{date[0]}'")
+    #         elif len(date) == 2:
+    #             sql['act'].append(f"""(
+    #                 DA.activation_date BETWEEN '{date[0]}' AND '{date[1]}'
+    #             )""")
             
         case _:
             st.error(f'Tidak ada tabel dengan nama {table}')

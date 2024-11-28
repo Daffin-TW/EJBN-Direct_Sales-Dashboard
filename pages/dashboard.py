@@ -48,12 +48,15 @@ def d2_first_row(data: pd.DataFrame, agent_filter: bool = False):
         with col2.container(border=True):
             vis.rce_comparison.revenue_linechart(data, agent_filter)
 
-def d2_second_row(data: pd.DataFrame, agent_filter: bool = False):
+def d2_second_row(data: pd.DataFrame):
     col1, col2 = st.columns(2)
 
     with st.container():
         with col1.container(border=True):
-            vis.rce_comparison.product_barchart(data, agent_filter)
+            vis.rce_comparison.product_barchart(data[0])
+        
+        with col2.container(border=True):
+            vis.rce_comparison.achieve_barchart(data)
 
 
 initialization()
@@ -97,9 +100,10 @@ match ss.dashboard_selection:
                 '**Filter**', icon='🔍', expanded=True
             )
             with expander:
-                filter_query = filter_dashboard('RCE Comparison')
+                filter_query = filter_dashboard('General')
 
         activation_data = fetch_data('Activation', filter_query['act']).reset_index()
+        target_data = fetch_data('RCE Target', filter_query['tar']).reset_index()
 
         if not activation_data.empty:
             ss.data_is_empty = False
@@ -108,7 +112,7 @@ match ss.dashboard_selection:
                 agent = filter_peragent()
 
             d2_first_row(activation_data, agent)
-            d2_second_row(activation_data, agent)
+            d2_second_row((activation_data, target_data))
 
         else:
             ss.data_is_empty = True

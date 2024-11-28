@@ -190,17 +190,18 @@ class general:
             marker_symbol='diamond-wide',
             hovertemplate='Target: Rp%{y:,}',
             texttemplate='Rp%{y:,}',
-            textfont=dict(color='black')
+            textfont_color='black'
         )
 
         main_fig = px.bar(
             df_act, x='Tanggal', y='Achieve', height=400,
             color_discrete_sequence=['orange']
         )
-        main_fig.update_traces(hovertemplate='Avhieve : Rp%{y:,}')
+        main_fig.update_traces(hovertemplate='Achieve : Rp%{y:,}')
         main_fig.add_trace(fig.data[0])
         main_fig.update_layout(
-            yaxis_tickformat=',',
+            yaxis_tickprefix='Rp',
+            yaxis_tickformat=',.1d',
             barcornerradius='20%',
             dragmode='pan',
             hovermode='x'
@@ -263,7 +264,7 @@ class general:
             marker_size=10,
             marker_symbol='diamond-wide',
             hovertemplate='Target: %{y}',
-            textfont=dict(color='black')
+            textfont_color='black'
         )
 
         main_fig = px.bar(
@@ -275,7 +276,7 @@ class general:
         main_fig.add_trace(fig.data[0], row=1, col=2)
         main_fig.add_trace(fig.data[1], row=1, col=1)
         main_fig.for_each_annotation(
-            lambda a: a.update(text=a.text.split("=")[1])
+            lambda a: a.update(text=a.text.split('=')[1])
         )
         main_fig.update_layout(
             barcornerradius='20%',
@@ -351,7 +352,7 @@ class rce_comparison:
             lambda t: t.update(
                 legendgroup=t.name.split(', ')[-1],
                 legendgrouptitle={'text': t.name.split(', ')[-1]},
-                name=t.name.split(', ')[0].split(':')[-1],
+                name=t.name.split(', ')[0].split(': ')[-1],
                 hovertemplate='%{y:.0f}'
             )
         )
@@ -416,7 +417,7 @@ class rce_comparison:
         )
         fig.for_each_trace(
             lambda t: t.update(
-                name=t.name.split(':')[-1], hovertemplate='%{y}',
+                name=t.name.split(': ')[-1], hovertemplate='%{y}',
             )
         )
         fig.update_layout(
@@ -438,8 +439,8 @@ class rce_comparison:
 
         st.write(fig)
 
-    # @st.cache_data(ttl=300, show_spinner=False)
-    def product_barchart(data: pd.DataFrame, agent_filter=False):
+    @st.cache_data(ttl=300, show_spinner=False)
+    def product_barchart(data: pd.DataFrame):
         df = data.copy()
 
         df['product_tenure'] = (df['product'] + ' - ' + df['tenure'].astype(str))
@@ -455,7 +456,7 @@ class rce_comparison:
 
         fig = px.bar(
             df, x='Jumlah Aktivasi', y='Produk & Tenure', facet_row='RCE',
-            color='Tipe Order', text_auto=True,height=700,
+            color='Tipe Order', text_auto=True, height=700,
             color_discrete_sequence=['#DBD3D3', '#FF7F3E', '#0D92F4'],
             category_orders={
                 'Tipe Order': [
@@ -480,7 +481,95 @@ class rce_comparison:
         fig.update_xaxes(showgrid=True, minallowed=0, showline=True)
         fig.update_traces(insidetextanchor='middle')
         fig.for_each_annotation(
-            lambda a: a.update(text=a.text.split("=")[1])
+            lambda a: a.update(text=a.text.split(': ')[-1], xshift=-5)
+        )
+
+        st.write(fig)
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def achieve_barchart(data: pd.DataFrame):
+        df_act, df_tar = data[0].copy(), data[1].copy()
+
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'order_type': 'Tipe Order',
+            'rce': 'RCE',
+            'count': 'Achieve'
+        }
+
+        order_type_rename = {
+            'Change Postpaid Plan': 'CPP',
+            'Migration': 'GA',
+            'New Registration': 'GA',
+            'target_ga': 'GA',
+            'target_cpp': 'CPP'
+        }
+
+        df_act['order_type'] = df_act['order_type'].replace(order_type_rename)
+        df_act['activation_date'] = pd.to_datetime(df_act['activation_date'])
+        df_act = df_act.groupby(
+                [pd.Grouper(key='activation_date', freq='ME'), df_act['rce']]
+            )['order_type'].value_counts().reset_index()
+        df_act['activation_date'] = df_act['activation_date'].map(
+            lambda dt: dt.replace(day=1)
+        )
+        df_act.rename(columns=columns_rename, inplace=True)
+
+        df_tar.rename(columns=columns_rename, inplace=True)
+        df_tar['Tanggal'] = pd.to_datetime(df_tar['Tanggal'])
+        df_tar = df_tar.melt(
+            ['Tanggal', 'RCE'], ('target_ga', 'target_cpp'),
+            'Tipe Order', 'Target'
+        )
+        df_tar = df_tar.groupby(
+                ['Tanggal', 'Tipe Order', 'RCE']
+            ).sum().reset_index()
+        df_tar['Tipe Order'] = df_tar['Tipe Order'].replace(order_type_rename)
+        df_tar['Target'] = df_tar['Target'].replace(0, np.nan)
+
+        df = pd.merge(
+            df_act, df_tar, how='outer', on=['Tanggal', 'Tipe Order', 'RCE']
+        )
+        df['Persentase Achieve (%)'] = (df['Achieve'] / df['Target']) * 100
+        df.dropna(inplace=True)
+
+        fig = px.bar(
+            df, x='Tanggal', y='Persentase Achieve (%)', barmode='group',
+            color='RCE', facet_row='Tipe Order', height=700, text_auto=True,
+            color_discrete_sequence=px.colors.qualitative.Dark2
+        )
+
+        fig.for_each_annotation(
+            lambda a: a.update(text=a.text.split('=')[1], xshift=-5)
+        )
+        fig.for_each_yaxis(lambda a: a.update(ticksuffix='%'))
+        fig.for_each_trace(lambda t: t.update(name=t.name.split(': ')[-1]))
+        fig.update_layout(
+            barcornerradius='20%',
+            dragmode='pan',
+            legend=dict(
+                orientation='h',
+                yanchor='bottom',
+                xanchor='left',
+                y=1
+            )
+        )
+        fig.update_traces(
+            textposition='outside', 
+            texttemplate='%{y:.1f}%',
+            hovertemplate='%{y:.1f}% | %{x}',
+            textfont_color='black'
+        )
+        fig.update_xaxes(
+            showline=True,
+            dtick='M1', tickformat='%b %Y'
+        )
+        fig.update_yaxes(minallowed=0, matches=None)
+        fig.add_hline(
+            100, line_dash='dash', line_color='red',
+            annotation_text='Target', annotation_position='bottom right',
+            annotation_font_color='red'
         )
 
         st.write(fig)

@@ -88,7 +88,8 @@ def fetch_data(table: str, filter_query: str = ''):
         case 'RCE Target':
             sql = f"""
                 SELECT
-                    RT.id, RT.target_date, RT.target_ga, RT.target_cpp,
+                    RT.id, CONCAT(R.id, ': ', P.name) AS rce,
+                    RT.target_date, RT.target_ga, RT.target_cpp,
                     RT.target_revenue
                 FROM RceTarget AS RT
                     INNER JOIN Rce AS R ON RT.rce_id = R.id
@@ -142,7 +143,7 @@ def fetch_data(table: str, filter_query: str = ''):
             sql = f"""
                 SELECT
                     DA.activation_date, DA.product,
-                    DA.tenure, CONCAT(R.id, ':',  P.name) AS rce, DA.agent_id,
+                    DA.tenure, CONCAT(R.id, ': ',  P.name) AS rce, DA.agent_id,
                     DA.order_type, DA.tactical_regular, DA.guaranteed_revenue
                 FROM DailyActivation AS DA
                     INNER JOIN Agent AS A ON DA.agent_id = A.id
