@@ -54,16 +54,8 @@ class general:
                 'Tanggal': False
             }
         )
-        fig.update_layout(
-            hovermode='x unified',
-            dragmode='pan',
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                xanchor='left',
-                y=1
-            )
-        )
+        fig.update_layout(hovermode='x unified', dragmode='pan')
+        fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
         fig.update_xaxes(
             showline=True, showgrid=True,
             title=TITLE_FONT_COLOR
@@ -137,16 +129,8 @@ class general:
                 ]
             }, hover_data={'Produk & Tenure': False}, hover_name='Produk & Tenure'
         )
-        fig.update_layout(
-            barcornerradius='20%',
-            dragmode='pan',
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                xanchor='left',
-                y=1
-            )
-        )
+        fig.update_layout(barcornerradius='20%', dragmode='pan')
+        fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
         fig.update_yaxes(
             categoryorder='total ascending', title=TITLE_FONT_COLOR,
             range=[index_range - 10.5, index_range],
@@ -365,16 +349,8 @@ class rce_comparison:
                 hovertemplate='%{y:.0f}'
             )
         )
-        fig.update_layout(
-            hovermode='x unified',
-            dragmode='pan',
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                xanchor='left',
-                y=1
-            )
-        )
+        fig.update_layout(hovermode='x unified', dragmode='pan')
+        fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
         fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
         fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
@@ -433,14 +409,9 @@ class rce_comparison:
             hovermode='x unified',
             dragmode='pan',
             yaxis_tickprefix='Rp',
-            yaxis_tickformat=',.1d',
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                xanchor='left',
-                y=1
-            )
+            yaxis_tickformat=',.1d'
         )
+        fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
         fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
         fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
@@ -473,16 +444,8 @@ class rce_comparison:
                 ]
             }, hover_data={'Produk & Tenure': False}, hover_name='Produk & Tenure'
         )
-        fig.update_layout(
-            barcornerradius='20%',
-            dragmode='pan',
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                xanchor='left',
-                y=1
-            )
-        )
+        fig.update_layout(barcornerradius='20%', dragmode='pan')
+        fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
         fig.update_yaxes(
             range=[-0.5, 2.5], categoryorder='total descending',
             minallowed=-0.5, matches=None, title=TITLE_FONT_COLOR
@@ -556,16 +519,8 @@ class rce_comparison:
         )
         fig.for_each_yaxis(lambda a: a.update(ticksuffix='%'))
         fig.for_each_trace(lambda t: t.update(name=t.name.split(': ')[-1]))
-        fig.update_layout(
-            barcornerradius='20%',
-            dragmode='pan',
-            legend=dict(
-                orientation='h',
-                yanchor='bottom',
-                xanchor='left',
-                y=1
-            )
-        )
+        fig.update_layout(barcornerradius='20%', dragmode='pan')
+        fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
         fig.update_traces(
             textposition='outside', 
             texttemplate='%{y:.1f}%',
