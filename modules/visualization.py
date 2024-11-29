@@ -1,11 +1,16 @@
 from streamlit import session_state as ss
 from datetime import datetime, timedelta, date
 from plotly.subplots import make_subplots
+from modules import filter_peragent
 import plotly.graph_objects as go
 import plotly.express as px
 import streamlit as st
 import pandas as pd
 import numpy as np
+
+
+# CONSTANT
+TITLE_FONT_COLOR = {'font_color': 'black'}
 
 
 class general:
@@ -59,8 +64,11 @@ class general:
                 y=1
             )
         )
-        fig.update_xaxes(showline=True, showgrid=True)
-        fig.update_yaxes(minallowed=0)
+        fig.update_xaxes(
+            showline=True, showgrid=True,
+            title=TITLE_FONT_COLOR
+        )
+        fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
@@ -96,8 +104,8 @@ class general:
             dragmode='pan'
         )
 
-        fig.update_xaxes(showline=True)
-        fig.update_yaxes(minallowed=0)
+        fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
+        fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
 
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
@@ -140,11 +148,11 @@ class general:
             )
         )
         fig.update_yaxes(
-            categoryorder='total ascending',
+            categoryorder='total ascending', title=TITLE_FONT_COLOR,
             range=[index_range - 10.5, index_range],
             minallowed=0, maxallowed=index_range
         )
-        fig.update_xaxes(showgrid=True, minallowed=0)
+        fig.update_xaxes(showgrid=True, minallowed=0, title=TITLE_FONT_COLOR)
         fig.update_traces(insidetextanchor='middle')
 
         st.write(fig)
@@ -206,8 +214,10 @@ class general:
             dragmode='pan',
             hovermode='x'
         )
-        main_fig.update_xaxes(dtick='M1', tickformat='%b %Y')
-        main_fig.update_yaxes(minallowed=0)
+        main_fig.update_xaxes(
+            dtick='M1', tickformat='%b %Y', title=TITLE_FONT_COLOR
+        )
+        main_fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
 
         st.write(main_fig)
 
@@ -284,16 +294,15 @@ class general:
             hovermode='x'
         )
         main_fig.update_xaxes(
-            showline=True,
-            dtick='M1', tickformat='%b %Y'
+            showline=True, dtick='M1', tickformat='%b %Y', title=TITLE_FONT_COLOR
         )
-        main_fig.update_yaxes(minallowed=0)
+        main_fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
 
         st.write(main_fig)
 
 class rce_comparison:
     @st.cache_data(ttl=300, show_spinner=False)
-    def ordertype_linechart(data: pd.DataFrame, agent_filter):
+    def ordertype_linechart(data: pd.DataFrame, agent_filter=False):
         df = data.copy()
 
         order_type_rename = {
@@ -366,8 +375,8 @@ class rce_comparison:
                 y=1
             )
         )
-        fig.update_xaxes(showline=True, showgrid=True)
-        fig.update_yaxes(minallowed=0)
+        fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
+        fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
@@ -432,8 +441,8 @@ class rce_comparison:
                 y=1
             )
         )
-        fig.update_xaxes(showline=True, showgrid=True)
-        fig.update_yaxes(minallowed=0)
+        fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
+        fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
@@ -476,9 +485,11 @@ class rce_comparison:
         )
         fig.update_yaxes(
             range=[-0.5, 2.5], categoryorder='total descending',
-            minallowed=-0.5, matches=None
+            minallowed=-0.5, matches=None, title=TITLE_FONT_COLOR
         )
-        fig.update_xaxes(showgrid=True, minallowed=0, showline=True)
+        fig.update_xaxes(
+            showgrid=True, minallowed=0, showline=True, title=TITLE_FONT_COLOR
+        )
         fig.update_traces(insidetextanchor='middle')
         fig.for_each_annotation(
             lambda a: a.update(text=a.text.split(': ')[-1], xshift=-5)
@@ -562,10 +573,9 @@ class rce_comparison:
             textfont_color='black'
         )
         fig.update_xaxes(
-            showline=True,
-            dtick='M1', tickformat='%b %Y'
+            showline=True, dtick='M1', tickformat='%b %Y', title=TITLE_FONT_COLOR
         )
-        fig.update_yaxes(minallowed=0, matches=None)
+        fig.update_yaxes(minallowed=0, matches=None, title=TITLE_FONT_COLOR)
         fig.add_hline(
             100, line_dash='dash', line_color='red',
             annotation_text='Target', annotation_position='bottom right',
