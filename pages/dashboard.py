@@ -16,47 +16,47 @@ def initialization():
 
 def d1_first_row(data: pd.DataFrame):
     col1, col2 = st.columns(2)
-    
-    with st.container():
-        with col1.container(border=True):
-            vis.general.ordertype_linechart(data)
 
-        with col2.container(border=True):
-            vis.general.revenue_areachart(data)
+    with col1.container(border=True):
+        vis.general.ordertype_linechart(data)
+
+    with col2.container(border=True):
+        vis.general.revenue_areachart(data)
 
 
 def d1_second_row(data: tuple[pd.DataFrame]):
     col1, col2, col3 = st.columns(3)
-    
-    with st.container():
-        with col1.container(border=True):
-            vis.general.gacpp_barchart(data)
 
-        with col2.container(border=True):
-            vis.general.revenue_barchart(data)
+    with col1.container(border=True):
+        vis.general.gacpp_barchart(data)
 
-        with col3.container(border=True):
-            vis.general.product_barchart(data[0])
+    with col2.container(border=True):
+        vis.general.revenue_barchart(data)
+
+    with col3.container(border=True):
+        vis.general.product_barchart(data[0])
 
 def d2_first_row(data: pd.DataFrame, agent_filter: bool = False):
-    col1, col2 = st.columns(2)
-    
-    with st.container():
-        with col1.container(border=True):
-            vis.rce_comparison.ordertype_linechart(data, agent_filter)
+    container = st.container(border=True)
+    col1, col2 = container.columns(2)
 
-        with col2.container(border=True):
-            vis.rce_comparison.revenue_linechart(data, agent_filter)
+    with container:
+        agent_filter = filter_peragent()
+
+    with col1.container(border=True):
+        vis.rce_comparison.ordertype_linechart(data, agent_filter)
+
+    with col2.container(border=True):
+        vis.rce_comparison.revenue_linechart(data, agent_filter)
 
 def d2_second_row(data: pd.DataFrame):
     col1, col2 = st.columns(2)
 
-    with st.container():
-        with col1.container(border=True):
-            vis.rce_comparison.product_barchart(data[0])
-        
-        with col2.container(border=True):
-            vis.rce_comparison.achieve_barchart(data)
+    with col1.container(border=True):
+        vis.rce_comparison.product_barchart(data[0])
+    
+    with col2.container(border=True):
+        vis.rce_comparison.achieve_barchart(data)
 
 
 initialization()
@@ -108,10 +108,7 @@ match ss.dashboard_selection:
         if not activation_data.empty:
             ss.data_is_empty = False
 
-            with expander:
-                agent = filter_peragent()
-
-            d2_first_row(activation_data, agent)
+            d2_first_row(activation_data)
             d2_second_row((activation_data, target_data))
 
         else:

@@ -60,9 +60,8 @@ def filter_active():
     )
 
 def filter_peragent():
-    # st.markdown('**Filter Per Agent**')
     return st.checkbox(
-        '**Filter Rata-rata Per Agent**', key='filter_peragent',
+        '**Rata-rata Per Agent**', key='filter_peragent',
     )
 
 def filter_edit(table: str):
