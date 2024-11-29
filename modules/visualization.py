@@ -215,7 +215,6 @@ class general:
             'order_type': 'Tipe Order',
             'count': 'Achieve'
         }
-
         order_type_rename = {
             'Change Postpaid Plan': 'CPP',
             'Migration': 'GA',
@@ -461,7 +460,7 @@ class rce_comparison:
         st.write(fig)
 
     @st.cache_data(ttl=300, show_spinner=False)
-    def achieve_barchart(data: pd.DataFrame):
+    def achieve_barchart(data: tuple[pd.DataFrame]):
         df_act, df_tar = data[0].copy(), data[1].copy()
 
         columns_rename = {
@@ -471,7 +470,6 @@ class rce_comparison:
             'rce': 'RCE',
             'count': 'Achieve'
         }
-
         order_type_rename = {
             'Change Postpaid Plan': 'CPP',
             'Migration': 'GA',
@@ -483,7 +481,7 @@ class rce_comparison:
         df_act['order_type'] = df_act['order_type'].replace(order_type_rename)
         df_act['activation_date'] = pd.to_datetime(df_act['activation_date'])
         df_act = df_act.groupby(
-                [pd.Grouper(key='activation_date', freq='ME'), df_act['rce']]
+                [pd.Grouper(key='activation_date', freq='ME'), 'rce']
             )['order_type'].value_counts().reset_index()
         df_act['activation_date'] = df_act['activation_date'].map(
             lambda dt: dt.replace(day=1)
@@ -538,3 +536,195 @@ class rce_comparison:
         )
 
         st.write(fig)
+
+class rce_statistics:
+    @st.cache_data(ttl=300, show_spinner=False)
+    def ordertype_linechart(data: tuple[pd.DataFrame]):
+        df_act, df_tar = data[0].copy(), data[1].copy()
+
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'order_type': 'Tipe Order',
+            'count': 'Achieve'
+        }
+        order_type_rename = {
+            'Change Postpaid Plan': 'CPP',
+            'Migration': 'GA',
+            'New Registration': 'GA',
+            'target_ga': 'GA',
+            'target_cpp': 'CPP'
+        }
+
+        df_act['order_type'] = df_act['order_type'].replace(order_type_rename)
+        df_act['activation_date'] = pd.to_datetime(df_act['activation_date'])
+        df_act = df_act.groupby(
+                'activation_date'
+            )['order_type'].value_counts().reset_index()
+        df_act.rename(columns=columns_rename, inplace=True)
+        df_act = df_act.pivot(
+            index=['Tanggal'], columns='Tipe Order', values='Achieve'
+        )
+        df_act = df_act.asfreq('D').reset_index()
+        df_act = df_act.melt(
+            id_vars=['Tanggal'], value_vars=['GA', 'CPP'],
+            value_name='Achieve'
+        )
+        df_act['Achieve'] = df_act['Achieve'].fillna(0)
+        df_act['Bulan'] = df_act['Tanggal'].dt.month
+        df_act['Jumlah Aktivasi'] = df_act.groupby(
+                ['Tipe Order', 'Bulan']
+            )['Achieve'].cumsum()
+        
+        df_tar.rename(columns=columns_rename, inplace=True)
+        df_tar['Tanggal'] = pd.to_datetime(df_tar['Tanggal'])
+        df_tar['Bulan'] = df_tar['Tanggal'].dt.month
+        df_tar = df_tar.melt(
+            'Bulan', ('target_ga', 'target_cpp'),
+            'Tipe Order', 'Target'
+        )
+        df_tar = df_tar.groupby(
+                ['Bulan', 'Tipe Order']
+            )['Target'].sum().reset_index()
+        df_tar['Tipe Order'] = df_tar['Tipe Order'].replace(order_type_rename)
+        df_tar['Target'] = df_tar['Target'].replace(0, np.nan)
+
+        df = pd.merge(df_act, df_tar, how='left', on=['Bulan', 'Tipe Order'])
+        df['Target Harian'] = df['Target'] / df['Tanggal'].dt.daysinmonth
+        df['Target Harian'] = df['Target Harian'].astype(float)
+        df['Target Harian'] = df.groupby(
+                ['Bulan', 'Tipe Order']
+            )['Target Harian'].cumsum()
+
+        month_year = df['Tanggal'].map(lambda dt: dt.replace(day=1)).unique()
+        for tanggal in month_year:
+            df.loc[len(df)] = [
+                tanggal, 'GA', np.nan, np.nan, np.nan, np.nan, np.nan
+            ]
+            df.loc[len(df)] = [
+                tanggal, 'CPP', np.nan, np.nan, np.nan, np.nan, np.nan
+            ]
+        df.sort_values(
+            by=['Tipe Order', 'Tanggal', 'Achieve'],
+            ascending=False, inplace=True
+        )
+
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        fig = px.line(
+            df, x='Tanggal', y='Target Harian', color_discrete_sequence=['red'],
+            line_dash='Tipe Order',
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        fig.update_traces(
+            legendgrouptitle_text='Target',
+            legendgroup='target',
+            hovertemplate='%{y:.0f}'
+        )
+        main_fig = px.line(
+            df, x='Tanggal', y='Jumlah Aktivasi',
+            height=500, line_dash='Tipe Order',
+            color_discrete_sequence=['#7AB2D3'],
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        main_fig.update_traces(
+            legendgrouptitle_text='Achieve',
+            legendgroup='achieve',
+            hovertemplate='%{y}'
+        )
+        main_fig.add_traces(fig.data)
+        main_fig.update_layout(hovermode='x unified', dragmode='pan')
+        main_fig.update_legends(
+            orientation='h', yanchor='bottom', xanchor='left', y=1
+        )
+        main_fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
+        main_fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
+        for i in line:
+            main_fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
+
+        st.write(main_fig)
+
+    # @st.cache_data(ttl=300, show_spinner=False)
+    def revenue_areachart(data: tuple[pd.DataFrame]):
+        df_act, df_tar = data[0].copy(), data[1].copy()
+
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'guaranteed_revenue': 'Revenue',
+            'target_revenue': 'Target'
+        }
+
+        df_act['activation_date'] = pd.to_datetime(df_act['activation_date'])
+        df_act = df_act.groupby(
+                ['activation_date']
+            )['guaranteed_revenue'].sum().reset_index()
+        df_act.rename(columns=columns_rename, inplace=True)
+        df_act['Bulan'] = df_act['Tanggal'].dt.month
+        df_act.set_index('Tanggal', inplace=True)
+        df_act = df_act.asfreq('D').reset_index()
+        df_act['Revenue'] = df_act.groupby(['Bulan'])['Revenue'].cumsum()
+
+        df_tar.rename(columns=columns_rename, inplace=True)
+        df_tar['Tanggal'] = pd.to_datetime(df_tar['Tanggal'])
+        df_tar['Bulan'] = df_tar['Tanggal'].dt.month
+        df_tar = df_tar.groupby(
+                ['Bulan']
+            )['Target'].sum().reset_index()
+        df_tar['Target'] = df_tar['Target'].replace(0, np.nan)
+
+        df = pd.merge(df_act, df_tar, how='left', on='Bulan')
+        df['Target Harian'] = df['Target'] / df['Tanggal'].dt.daysinmonth
+        df['Target Harian'] = df['Target Harian'].astype(float)
+        df['Target Harian'] = df.groupby(
+                'Bulan'
+            )['Target Harian'].cumsum()
+
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        fig = px.line(
+            df, x='Tanggal', y='Target Harian', color_discrete_sequence=['red'],
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        fig.update_traces(
+            legendgrouptitle_text='Target',
+            legendgroup='target',
+            hovertemplate='Rp%{y:,.0f}'
+        )
+        main_fig = px.area(
+            df, x='Tanggal', y='Revenue', 
+            height=500, color_discrete_sequence=['#7AB2D3'],
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        main_fig.update_traces(
+            legendgrouptitle_text='Achieve',
+            legendgroup='achieve',
+            hovertemplate='Rp%{y:,.0f}'
+        )
+        main_fig.add_traces(fig.data)
+        main_fig.update_layout(
+            yaxis_tickprefix='Rp',
+            yaxis_tickformat=',.1d',
+            hovermode='x unified', dragmode='pan'
+        )
+        main_fig.update_legends(
+            orientation='h', yanchor='bottom', xanchor='left', y=1
+        )
+        main_fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
+        main_fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
+        for i in line:
+            main_fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
+
+        st.write(main_fig)

@@ -14,6 +14,16 @@ def initialization():
     init_content()
     init_sidebar()
 
+def load_filter(filter_option: str):
+    with st.spinner('Menghubungi database, mohon ditunggu...'):
+        expander = st.sidebar.expander(
+            '**Filter**', icon='🔍', expanded=True
+        )
+        with expander:
+            filter_query = filter_dashboard(filter_option)
+        
+        return filter_query
+
 def d1_first_row(data: pd.DataFrame):
     col1, col2 = st.columns(2)
 
@@ -58,11 +68,20 @@ def d2_second_row(data: pd.DataFrame):
     with col2.container(border=True):
         vis.rce_comparison.achieve_barchart(data)
 
+def d3_first_row(data: tuple[pd.DataFrame]):
+    col1, col2 = st.columns(2)
+
+    with col1.container(border=True):
+        vis.rce_statistics.ordertype_linechart(data)
+    
+    with col2.container(border=True):
+        vis.rce_statistics.revenue_areachart(data)
+
 
 initialization()
 
 dashboard_options = (
-    'Umum', 'Perbandingan RCE'
+    'Umum', 'Perbandingan RCE', 'Statistik RCE'
 )
 
 with st.sidebar:
@@ -76,12 +95,7 @@ st.markdown(f'### Dashboard {ss.dashboard_selection}')
 
 match ss.dashboard_selection:
     case 'Umum':
-        with st.spinner('Menghubungi database, mohon ditunggu...'):
-            expander = st.sidebar.expander(
-                '**Filter**', icon='🔍', expanded=True
-            )
-            with expander:
-                filter_query = filter_dashboard('General')
+        filter_query = load_filter('RCE | Target')
 
         activation_data = fetch_data('Activation', filter_query['act']).reset_index()
         target_data = fetch_data('RCE Target', filter_query['tar']).reset_index()
@@ -95,12 +109,7 @@ match ss.dashboard_selection:
             ss.data_is_empty = True
             
     case 'Perbandingan RCE':
-        with st.spinner('Menghubungi database, mohon ditunggu...'):
-            expander = st.sidebar.expander(
-                '**Filter**', icon='🔍', expanded=True
-            )
-            with expander:
-                filter_query = filter_dashboard('General')
+        filter_query = load_filter('RCE | Target')
 
         activation_data = fetch_data('Activation', filter_query['act']).reset_index()
         target_data = fetch_data('RCE Target', filter_query['tar']).reset_index()
@@ -110,6 +119,20 @@ match ss.dashboard_selection:
 
             d2_first_row(activation_data)
             d2_second_row((activation_data, target_data))
+
+        else:
+            ss.data_is_empty = True
+
+    case 'Statistik RCE':
+        filter_query = load_filter('RCE | Target')
+
+        activation_data = fetch_data('Activation', filter_query['act']).reset_index()
+        target_data = fetch_data('RCE Target', filter_query['tar']).reset_index()
+
+        if not activation_data.empty:
+            ss.data_is_empty = False
+
+            d3_first_row((activation_data, target_data))
 
         else:
             ss.data_is_empty = True
