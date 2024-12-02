@@ -783,7 +783,7 @@ class rce_statistics:
 
         st.write(fig)
 
-    # @st.cache_data(ttl=300, show_spinner=False)
+    @st.cache_data(ttl=300, show_spinner=False)
     def ordertype_heatmap(data: pd.DataFrame):
         df = data.copy()
 
@@ -815,7 +815,10 @@ class rce_statistics:
             dragmode='pan'
         )
         fig.update_xaxes(title=TITLE_FONT_COLOR)
-        fig.update_yaxes(fixedrange=True, title=TITLE_FONT_COLOR)
+        fig.update_yaxes(
+            fixedrange=True, title=TITLE_FONT_COLOR,
+            tickangle=-90, showgrid=False
+        )
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
