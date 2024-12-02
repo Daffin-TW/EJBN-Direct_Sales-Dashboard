@@ -56,10 +56,7 @@ class general:
         )
         fig.update_layout(hovermode='x unified', dragmode='pan')
         fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
-        fig.update_xaxes(
-            showline=True, showgrid=True,
-            title=TITLE_FONT_COLOR
-        )
+        fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
         fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
@@ -136,7 +133,7 @@ class general:
             range=[index_range - 10.5, index_range],
             minallowed=0, maxallowed=index_range
         )
-        fig.update_xaxes(showgrid=True, minallowed=0, title=TITLE_FONT_COLOR)
+        fig.update_xaxes(minallowed=0, title=TITLE_FONT_COLOR)
         fig.update_traces(insidetextanchor='middle')
 
         st.write(fig)
@@ -350,7 +347,7 @@ class rce_comparison:
         )
         fig.update_layout(hovermode='x unified', dragmode='pan')
         fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
-        fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
+        fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
         fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
@@ -411,7 +408,7 @@ class rce_comparison:
             yaxis_tickformat=',.1d'
         )
         fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
-        fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
+        fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
         fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
@@ -449,9 +446,7 @@ class rce_comparison:
             range=[-0.5, 2.5], categoryorder='total descending',
             minallowed=-0.5, matches=None, title=TITLE_FONT_COLOR
         )
-        fig.update_xaxes(
-            showgrid=True, minallowed=0, showline=True, title=TITLE_FONT_COLOR
-        )
+        fig.update_xaxes(minallowed=0, showline=True, title=TITLE_FONT_COLOR)
         fig.update_traces(insidetextanchor='middle')
         fig.for_each_annotation(
             lambda a: a.update(text=a.text.split(': ')[-1], xshift=-5)
@@ -643,7 +638,7 @@ class rce_statistics:
         main_fig.update_legends(
             orientation='h', yanchor='bottom', xanchor='left', y=1
         )
-        main_fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
+        main_fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
         main_fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
             main_fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
@@ -722,14 +717,14 @@ class rce_statistics:
         main_fig.update_legends(
             orientation='h', yanchor='bottom', xanchor='left', y=1
         )
-        main_fig.update_xaxes(showline=True, showgrid=True, title=TITLE_FONT_COLOR)
+        main_fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
         main_fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
             main_fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
         st.write(main_fig)
 
-    # @st.cache_data(ttl=300, show_spinner=False)
+    @st.cache_data(ttl=300, show_spinner=False)
     def growth_barchart(data: pd.DataFrame):
         df = data.copy()
 
