@@ -166,7 +166,7 @@ class general:
         df_tar = df_tar.groupby(['Tanggal']).sum().reset_index()
         df_tar['Target'] = df_tar['Target'].replace(0, np.nan)
         
-        df = pd.merge(df_act, df_tar, how='outer', on='Tanggal')
+        df = pd.merge(df_act, df_tar, how='left', on='Tanggal')
 
         fig = px.scatter(
             df, x='Tanggal', y='Target',
@@ -243,7 +243,7 @@ class general:
         df_tar['Tipe Order'] = df_tar['Tipe Order'].replace(order_type_rename)
         df_tar['Target'] = df_tar['Target'].replace(0, np.nan)
 
-        df = pd.merge(df_act, df_tar, how='outer', on=['Tanggal', 'Tipe Order'])
+        df = pd.merge(df_act, df_tar, how='left', on=['Tanggal', 'Tipe Order'])
 
         fig = px.scatter(
             df, x='Tanggal', y='Target', color='Tipe Order',
