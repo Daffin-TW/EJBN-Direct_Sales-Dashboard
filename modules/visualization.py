@@ -799,6 +799,11 @@ class rce_statistics:
                 pd.Grouper(key='activation_date', freq='D')
             )['order_type'].value_counts().reset_index()
         df.rename(columns=columns_rename, inplace=True)
+
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
         df = df.pivot(
                 index='Tipe Order', columns='Tanggal'
             )['Jumlah Aktivasi'].fillna(0)
@@ -811,5 +816,7 @@ class rce_statistics:
         )
         fig.update_xaxes(title=TITLE_FONT_COLOR)
         fig.update_yaxes(fixedrange=True, title=TITLE_FONT_COLOR)
+        for i in line:
+            fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
         st.write(fig)
