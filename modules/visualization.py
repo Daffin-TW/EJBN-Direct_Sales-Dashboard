@@ -650,7 +650,7 @@ class rce_statistics:
 
         st.write(main_fig)
 
-    # @st.cache_data(ttl=300, show_spinner=False)
+    @st.cache_data(ttl=300, show_spinner=False)
     def revenue_areachart(data: tuple[pd.DataFrame]):
         df_act, df_tar = data[0].copy(), data[1].copy()
 
@@ -728,3 +728,62 @@ class rce_statistics:
             main_fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
         st.write(main_fig)
+
+    # @st.cache_data(ttl=300, show_spinner=False)
+    def growth_barchart(data: pd.DataFrame):
+        df = data.copy()
+
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'order_type': 'Tipe Achieve',
+            'count': 'Achieve'
+        }
+        order_type_rename = {
+            'Change Postpaid Plan': 'CPP',
+            'Migration': 'GA',
+            'New Registration': 'GA',
+        }
+
+        df['order_type'] = df['order_type'].replace(order_type_rename)
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+        df_order = df.groupby(
+                pd.Grouper(key='activation_date', freq='ME')
+            )['order_type'].value_counts().reset_index()
+        df_rev = df.groupby(
+                pd.Grouper(key='activation_date', freq='ME')
+            )['guaranteed_revenue'].sum().reset_index()
+        df_rev['order_type'] = 'Revenue'
+        
+        df = df_order.copy()
+        for value in df_rev.values:
+            df.loc[len(df)] = value[[0, 2, 1]]
+
+        df['activation_date'] = df['activation_date'].map(
+            lambda dt: dt.replace(day=1)
+        )
+        df.rename(columns=columns_rename, inplace=True)
+        df.sort_values(['Tanggal', 'Tipe Achieve'], inplace=True)
+        df['Growth Rate (%)'] = df['Achieve'].pct_change(periods=3)
+        df['Growth Rate (%)'] = df['Growth Rate (%)'] * 100
+        df.dropna(inplace=True)
+        df.reset_index(inplace=True)
+
+        fig = px.bar(
+            df, x='Tanggal', y='Growth Rate (%)', barmode='group',
+            color='Tipe Achieve', height=500,
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        fig.update_traces(hovertemplate='%{y:.1f}% | %{x}')
+        fig.update_layout(
+            barcornerradius='20%',
+            dragmode='pan'
+        )
+        fig.update_xaxes(
+            dtick='M1', tickformat='%b %Y', title=TITLE_FONT_COLOR
+        )
+        fig.for_each_yaxis(lambda a: a.update(ticksuffix='%'))
+        fig.update_yaxes(title=TITLE_FONT_COLOR)
+        fig.add_hline(0, line_color='#3C3D37')
+
+        st.write(fig)

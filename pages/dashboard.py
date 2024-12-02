@@ -77,6 +77,15 @@ def d3_first_row(data: tuple[pd.DataFrame]):
     with col2.container(border=True):
         vis.rce_statistics.revenue_areachart(data)
 
+def d3_second_row(data: pd.DataFrame):
+    col1, col2 = st.columns(2)
+
+    with col1.container(border=True):
+        vis.rce_statistics.growth_barchart(data)
+    
+    # with col2.container(border=True):
+    #     vis.rce_comparison.achieve_barchart(data)
+
 
 initialization()
 
@@ -133,6 +142,7 @@ match ss.dashboard_selection:
             ss.data_is_empty = False
 
             d3_first_row((activation_data, target_data))
+            d3_second_row(activation_data)
 
         else:
             ss.data_is_empty = True
