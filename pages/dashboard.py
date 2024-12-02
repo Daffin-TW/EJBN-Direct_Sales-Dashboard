@@ -83,8 +83,8 @@ def d3_second_row(data: pd.DataFrame):
     with col1.container(border=True):
         vis.rce_statistics.growth_barchart(data)
     
-    # with col2.container(border=True):
-    #     vis.rce_comparison.achieve_barchart(data)
+    with col2.container(border=True):
+        vis.rce_statistics.ordertype_heatmap(data)
 
 
 initialization()

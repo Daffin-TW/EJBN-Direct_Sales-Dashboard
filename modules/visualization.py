@@ -782,3 +782,34 @@ class rce_statistics:
         fig.add_hline(0, line_color='#3C3D37')
 
         st.write(fig)
+
+    # @st.cache_data(ttl=300, show_spinner=False)
+    def ordertype_heatmap(data: pd.DataFrame):
+        df = data.copy()
+
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'order_type': 'Tipe Order',
+            'count': 'Jumlah Aktivasi'
+        }
+
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+        df = df.groupby(
+                pd.Grouper(key='activation_date', freq='D')
+            )['order_type'].value_counts().reset_index()
+        df.rename(columns=columns_rename, inplace=True)
+        df = df.pivot(
+                index='Tipe Order', columns='Tanggal'
+            )['Jumlah Aktivasi'].fillna(0)
+        
+        fig = px.imshow(df, x=df.columns, y=df.index, height=500)
+        fig.update_traces(hovertemplate='Aktivasi : %{z} | %{x}')
+        fig.update_layout(
+            barcornerradius='20%',
+            dragmode='pan'
+        )
+        fig.update_xaxes(title=TITLE_FONT_COLOR)
+        fig.update_yaxes(fixedrange=True, title=TITLE_FONT_COLOR)
+
+        st.write(fig)
