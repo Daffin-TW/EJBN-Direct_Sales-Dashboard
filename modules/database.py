@@ -115,6 +115,23 @@ def fetch_data(table: str, filter_query: str = ''):
                     RT.id
             """
 
+        case 'Agent Target':
+            sql = f"""
+                SELECT
+                    `AT`.id, CONCAT(A.id, ': ', PA.`name`) AS agent,
+                    RT.id AS rce_target_id, RT.target_date, `AT`.target_ga,
+                    `AT`.target_cpp
+                FROM AgentTarget AS `AT`
+                    INNER JOIN RceTarget AS RT ON `AT`.rce_target_id = RT.id
+                    INNER JOIN Rce as R ON RT.rce_id = R.id
+                    INNER JOIN Person PR ON R.rce_nik = PR.nik
+                    INNER JOIN Agent AS A ON `AT`.agent_id = A.id
+                    INNER JOIN Person AS PA ON A.agent_nik = PA.nik
+                {filter_query}
+                ORDER BY
+                    `AT`.id
+            """
+
         case 'Agent Target Editing':
             sql = f"""
                 SELECT

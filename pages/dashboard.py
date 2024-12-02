@@ -1,6 +1,6 @@
 from modules import (
     init_configuration, init_sidebar, init_content, filter_dashboard,
-    fetch_data, visualization as vis, filter_peragent
+    fetch_data, visualization as vis, filter_mean_agent
 )
 from streamlit import session_state as ss
 import streamlit as st
@@ -28,69 +28,78 @@ def d1_first_row(data: pd.DataFrame):
     col1, col2 = st.columns(2)
 
     with col1.container(border=True):
-        vis.general.ordertype_linechart(data)
+        vis.General.ordertype_linechart(data)
 
     with col2.container(border=True):
-        vis.general.revenue_areachart(data)
+        vis.General.revenue_areachart(data)
 
 
 def d1_second_row(data: tuple[pd.DataFrame]):
     col1, col2, col3 = st.columns(3)
 
     with col1.container(border=True):
-        vis.general.gacpp_barchart(data)
+        vis.General.gacpp_barchart(data)
 
     with col2.container(border=True):
-        vis.general.revenue_barchart(data)
+        vis.General.revenue_barchart(data)
 
     with col3.container(border=True):
-        vis.general.product_barchart(data[0])
+        vis.General.product_barchart(data[0])
 
-def d2_first_row(data: pd.DataFrame, agent_filter: bool = False):
+def d2_first_row(data: pd.DataFrame, Agent_filter: bool = False):
     container = st.container(border=True)
     col1, col2 = container.columns(2)
 
     with container:
-        agent_filter = filter_peragent()
+        Agent_filter = filter_mean_agent()
 
     with col1.container(border=True):
-        vis.rce_comparison.ordertype_linechart(data, agent_filter)
+        vis.RceComparison.ordertype_linechart(data, Agent_filter)
 
     with col2.container(border=True):
-        vis.rce_comparison.revenue_linechart(data, agent_filter)
+        vis.RceComparison.revenue_linechart(data, Agent_filter)
 
 def d2_second_row(data: pd.DataFrame):
     col1, col2 = st.columns(2)
 
     with col1.container(border=True):
-        vis.rce_comparison.product_barchart(data[0])
+        vis.RceComparison.product_barchart(data[0])
     
     with col2.container(border=True):
-        vis.rce_comparison.achieve_barchart(data)
+        vis.RceComparison.achieve_barchart(data)
 
 def d3_first_row(data: tuple[pd.DataFrame]):
     col1, col2 = st.columns(2)
 
     with col1.container(border=True):
-        vis.rce_statistics.ordertype_linechart(data)
+        vis.RceStatistics.ordertype_linechart(data)
     
     with col2.container(border=True):
-        vis.rce_statistics.revenue_areachart(data)
+        vis.RceStatistics.revenue_areachart(data)
 
 def d3_second_row(data: pd.DataFrame):
     col1, col2 = st.columns(2)
 
     with col1.container(border=True):
-        vis.rce_statistics.growth_barchart(data)
+        vis.RceStatistics.growth_barchart(data)
     
     with col2.container(border=True):
-        vis.rce_statistics.ordertype_heatmap(data)
+        vis.RceStatistics.ordertype_heatmap(data)
+
+def d4_first_row(data: tuple[pd.DataFrame]):
+    col1, col2 = st.columns(2)
+
+    with col1.container(border=True):
+        vis.Agent.ordertype_linechart(data)
+
+    with col2.container(border=True):
+        vis.Agent.revenue_areachart(data[0])
 
 
 initialization()
 
 dashboard_options = (
-    'Umum', 'Perbandingan RCE', 'Statistik RCE'
+    'Umum', 'Perbandingan RCE', 'Statistik RCE', 'Agent'
 )
 
 with st.sidebar:
@@ -143,6 +152,20 @@ match ss.dashboard_selection:
 
             d3_first_row((activation_data, target_data))
             d3_second_row(activation_data)
+
+        else:
+            ss.data_is_empty = True
+
+    case 'Agent':
+        filter_query = load_filter('Agent | Target')
+
+        activation_data = fetch_data('Activation', filter_query['act']).reset_index()
+        target_data = fetch_data('Agent Target', filter_query['tar']).reset_index()
+
+        if not activation_data.empty:
+            ss.data_is_empty = False
+
+            d4_first_row((activation_data, target_data))
 
         else:
             ss.data_is_empty = True

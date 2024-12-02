@@ -1,7 +1,6 @@
 from streamlit import session_state as ss
 from datetime import datetime, timedelta, date
 from plotly.subplots import make_subplots
-from modules import filter_peragent
 import plotly.graph_objects as go
 import plotly.express as px
 import streamlit as st
@@ -13,7 +12,7 @@ import numpy as np
 TITLE_FONT_COLOR = {'font_color': 'black'}
 
 
-class general:
+class General:
     @st.cache_data(ttl=300, show_spinner=False)
     def ordertype_linechart(data: pd.DataFrame):
         df = data.copy()
@@ -56,6 +55,7 @@ class general:
         )
         fig.update_layout(hovermode='x unified', dragmode='pan')
         fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
+        fig.update_traces(hovertemplate='%{y:.0f}')
         fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
         fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
         for i in line:
@@ -92,7 +92,7 @@ class general:
             hovermode='x unified',
             dragmode='pan'
         )
-
+        fig.update_traces(hovertemplate='Rp%{y:,.0f}')
         fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
         fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
 
@@ -118,7 +118,7 @@ class general:
 
         fig = px.bar(
             df, x='Jumlah Aktivasi', y='Produk & Tenure',
-            color='Tipe Order', text_auto=True,height=400,
+            color='Tipe Order', text_auto=True, height=400,
             color_discrete_sequence=['#DBD3D3', '#FF7F3E', '#0D92F4'],
             category_orders={
                 'Tipe Order': [
@@ -280,7 +280,7 @@ class general:
 
         st.write(main_fig)
 
-class rce_comparison:
+class RceComparison:
     @st.cache_data(ttl=300, show_spinner=False)
     def ordertype_linechart(data: pd.DataFrame, agent_filter=False):
         df = data.copy()
@@ -532,7 +532,7 @@ class rce_comparison:
 
         st.write(fig)
 
-class rce_statistics:
+class RceStatistics:
     @st.cache_data(ttl=300, show_spinner=False)
     def ordertype_linechart(data: tuple[pd.DataFrame]):
         df_act, df_tar = data[0].copy(), data[1].copy()
@@ -590,6 +590,19 @@ class rce_statistics:
         df['Target Harian'] = df.groupby(
                 ['Bulan', 'Tipe Order']
             )['Target Harian'].cumsum()
+        df.replace(0, np.nan, inplace=True)
+        
+        df_sum = df.groupby(
+                'Tanggal'
+            )[['Jumlah Aktivasi', 'Target Harian']].sum().reset_index().copy()
+        df_sum = df_sum.rename(
+            columns={'Jumlah Aktivasi': 'Achieve', 'Target Harian': 'Target'}
+        )
+        df_sum = df_sum.melt(
+            id_vars='Tanggal', value_name='Total',
+            value_vars=['Achieve', 'Target'], var_name='Tipe'
+        )
+        df_sum.replace(0, np.nan, inplace=True)
 
         month_year = df['Tanggal'].map(lambda dt: dt.replace(day=1)).unique()
         for tanggal in month_year:
@@ -599,27 +612,42 @@ class rce_statistics:
             df.loc[len(df)] = [
                 tanggal, 'CPP', np.nan, np.nan, np.nan, np.nan, np.nan
             ]
+            df_sum.loc[len(df_sum)] = [tanggal, 'Achieve', np.nan]
+            df_sum.loc[len(df_sum)] = [tanggal, 'Target', np.nan]
         df.sort_values(
             by=['Tipe Order', 'Tanggal', 'Achieve'],
             ascending=False, inplace=True
         )
+        df_sum.sort_values(['Tanggal', 'Tipe'], ascending=False, inplace=True)
 
         minimum = df['Tanggal'].min()
         maximum = df['Tanggal'].max()
         line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
 
-        fig = px.line(
+        fig_tar = px.line(
             df, x='Tanggal', y='Target Harian', color_discrete_sequence=['red'],
             line_dash='Tipe Order',
             hover_data={
                 'Tanggal': False
             }
         )
-        fig.update_traces(
+        fig_tar.update_traces(
             legendgrouptitle_text='Target',
             legendgroup='target',
             hovertemplate='%{y:.0f}'
         )
+
+        fig_sum = px.line(
+            df_sum, x='Tanggal', y='Total', color='Tipe',
+            color_discrete_sequence=['red', '#7AB2D3']
+        )
+        fig_sum.update_traces(
+            legendgrouptitle_text='Summary',
+            legendgroup='summary',
+            hovertemplate='%{y:.0f}',
+            visible='legendonly'
+        )
+
         main_fig = px.line(
             df, x='Tanggal', y='Jumlah Aktivasi',
             height=500, line_dash='Tipe Order',
@@ -633,7 +661,8 @@ class rce_statistics:
             legendgroup='achieve',
             hovertemplate='%{y}'
         )
-        main_fig.add_traces(fig.data)
+        main_fig.add_traces(fig_tar.data)
+        main_fig.add_traces(fig_sum.data)
         main_fig.update_layout(hovermode='x unified', dragmode='pan')
         main_fig.update_legends(
             orientation='h', yanchor='bottom', xanchor='left', y=1
@@ -819,6 +848,186 @@ class rce_statistics:
             fixedrange=True, title=TITLE_FONT_COLOR,
             tickangle=-90, showgrid=False
         )
+        for i in line:
+            fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
+
+        st.write(fig)
+
+class Agent:
+    @st.cache_data(ttl=300, show_spinner=False)
+    def ordertype_linechart(data: tuple[pd.DataFrame]):
+        df_act, df_tar = data[0].copy(), data[1].copy()
+
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'order_type': 'Tipe Order',
+            'count': 'Achieve'
+        }
+        order_type_rename = {
+            'Change Postpaid Plan': 'CPP',
+            'Migration': 'GA',
+            'New Registration': 'GA',
+            'target_ga': 'GA',
+            'target_cpp': 'CPP'
+        }
+
+        df_act['order_type'] = df_act['order_type'].replace(order_type_rename)
+        df_act['activation_date'] = pd.to_datetime(df_act['activation_date'])
+        df_act = df_act.groupby(
+                'activation_date'
+            )['order_type'].value_counts().reset_index()
+        df_act.rename(columns=columns_rename, inplace=True)
+        df_act = df_act.pivot(
+            index=['Tanggal'], columns='Tipe Order', values='Achieve'
+        )
+        df_act = df_act.asfreq('D').reset_index()
+        df_act = df_act.melt(
+            id_vars=['Tanggal'], value_vars=['GA', 'CPP'],
+            value_name='Achieve'
+        )
+        df_act['Achieve'] = df_act['Achieve'].fillna(0)
+        df_act['Bulan'] = df_act['Tanggal'].dt.month
+        df_act['Jumlah Aktivasi'] = df_act.groupby(
+                ['Tipe Order', 'Bulan']
+            )['Achieve'].cumsum()
+        
+        df_tar.rename(columns=columns_rename, inplace=True)
+        df_tar['Tanggal'] = pd.to_datetime(df_tar['Tanggal'])
+        df_tar['Bulan'] = df_tar['Tanggal'].dt.month
+        df_tar = df_tar.melt(
+            'Bulan', ('target_ga', 'target_cpp'),
+            'Tipe Order', 'Target'
+        )
+        df_tar = df_tar.groupby(
+                ['Bulan', 'Tipe Order']
+            )['Target'].sum().reset_index()
+        df_tar['Tipe Order'] = df_tar['Tipe Order'].replace(order_type_rename)
+        df_tar['Target'] = df_tar['Target'].replace(0, np.nan)
+
+        df = pd.merge(df_act, df_tar, how='left', on=['Bulan', 'Tipe Order'])
+        df['Target Harian'] = df['Target'] / df['Tanggal'].dt.daysinmonth
+        df['Target Harian'] = df['Target Harian'].astype(float)
+        df['Target Harian'] = df.groupby(
+                ['Bulan', 'Tipe Order']
+            )['Target Harian'].cumsum()
+        df.replace(0, np.nan, inplace=True)
+
+        df_sum = df.groupby(
+                'Tanggal'
+            )[['Jumlah Aktivasi', 'Target Harian']].sum().reset_index().copy()
+        df_sum = df_sum.rename(
+            columns={'Jumlah Aktivasi': 'Achieve', 'Target Harian': 'Target'}
+        )
+        df_sum = df_sum.melt(
+            id_vars='Tanggal', value_name='Total',
+            value_vars=['Achieve', 'Target'], var_name='Tipe'
+        )
+        df_sum.replace(0, np.nan, inplace=True)
+
+        month_year = df['Tanggal'].map(lambda dt: dt.replace(day=1)).unique()
+        for tanggal in month_year:
+            df.loc[len(df)] = [
+                tanggal, 'GA', np.nan, np.nan, np.nan, np.nan, np.nan
+            ]
+            df.loc[len(df)] = [
+                tanggal, 'CPP', np.nan, np.nan, np.nan, np.nan, np.nan
+            ]
+            df_sum.loc[len(df_sum)] = [tanggal, 'Achieve', np.nan]
+            df_sum.loc[len(df_sum)] = [tanggal, 'Target', np.nan]
+        df.sort_values(
+            by=['Tipe Order', 'Tanggal', 'Achieve'],
+            ascending=False, inplace=True
+        )
+        df_sum.sort_values(['Tanggal', 'Tipe'], ascending=False, inplace=True)
+
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        fig_tar = px.line(
+            df, x='Tanggal', y='Target Harian', color_discrete_sequence=['red'],
+            line_dash='Tipe Order',
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        fig_tar.update_traces(
+            legendgrouptitle_text='Target',
+            legendgroup='target',
+            hovertemplate='%{y:.0f}'
+        )
+
+        fig_sum = px.line(
+            df_sum, x='Tanggal', y='Total', color='Tipe',
+            color_discrete_sequence=['red', '#7AB2D3']
+        )
+        fig_sum.update_traces(
+            legendgrouptitle_text='Summary',
+            legendgroup='summary',
+            hovertemplate='%{y:.0f}',
+            visible='legendonly'
+        )
+
+        main_fig = px.line(
+            df, x='Tanggal', y='Jumlah Aktivasi',
+            height=500, line_dash='Tipe Order',
+            color_discrete_sequence=['#7AB2D3'],
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        main_fig.update_traces(
+            legendgrouptitle_text='Achieve',
+            legendgroup='achieve',
+            hovertemplate='%{y}'
+        )
+        main_fig.add_traces(fig_tar.data)
+        main_fig.add_traces(fig_sum.data)
+        main_fig.update_layout(hovermode='x unified', dragmode='pan')
+        main_fig.update_legends(
+            orientation='h', yanchor='bottom', xanchor='left', y=1
+        )
+        main_fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
+        main_fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
+        for i in line:
+            main_fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
+
+        st.write(main_fig)
+
+    # @st.cache_data(ttl=300, show_spinner=False)
+    def revenue_areachart(data: pd.DataFrame):
+        df = data.copy()
+
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+        df = df.groupby(
+                'activation_date'
+            )['guaranteed_revenue'].sum().reset_index()
+        df.rename(columns={
+                'activation_date': 'Tanggal',
+                'guaranteed_revenue': 'Revenue'
+            }, inplace=True)
+        df = df.set_index('Tanggal').asfreq('D').reset_index()
+
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        fig = px.area(
+            df, x='Tanggal', y='Revenue', height=400,
+            color_discrete_sequence=['#CC2B52'],
+            hover_data={'Tanggal': False}
+        )
+        fig.update_layout(
+            yaxis_tickprefix='Rp',
+            yaxis_tickformat=',.1d',
+            hovermode='x unified',
+            dragmode='pan'
+        )
+
+        fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
+        fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
+
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 

@@ -31,6 +31,17 @@ def filter_rce():
     )
     return str(tuple(selection)).replace(',)', ')').replace('()', '')
 
+def filter_agent():
+    st.markdown('**Agent**')
+    options = fetch_data_primary('Agent Id Name').index
+    selection = st.multiselect(
+        'filter_rce', options=options,
+        placeholder='Filter berdasarkan Agent',
+        label_visibility='collapsed',
+        format_func=lambda x: x.split(' - ')[-2] + ' - ' + x.split(' - ')[-1]
+    )
+    return str(tuple(selection)).replace(',)', ')').replace('()', '')
+
 def filter_date():
     st.markdown('**Tanggal**')
     return st.date_input(
@@ -59,9 +70,9 @@ def filter_active():
         'filter_status', options=status_opt, label_visibility='collapsed'
     )
 
-def filter_peragent():
+def filter_mean_agent():
     return st.checkbox(
-        '**Rata-rata Per Agent**', key='filter_peragent',
+        '**Rata-rata Per Agent**', key='filter_mean_agent',
     )
 
 def filter_edit(table: str):
@@ -234,7 +245,39 @@ def filter_dashboard(table: str):
                     MONTH(RT.target_date) BETWEEN MONTH('{date[0]}') AND
                     MONTH('{date[1]}')
                 """)
-            
+        
+        case 'Agent | Target':
+            sql = dict()
+            sql['act'], sql['tar'] = list(), list()
+
+            agent = filter_agent()
+            rce = filter_rce()
+            channel = filter_channel()
+            date = filter_date()
+
+            if agent:
+                sql['act'].append(f'A.id IN {agent}')
+                sql['tar'].append(f'A.id IN {agent}')
+            if rce:
+                sql['act'].append(f'R.id IN {rce}')
+                sql['tar'].append(f'R.id IN {rce}')
+            if channel:
+                sql['act'].append(f'R.channel_code IN {channel}')
+                sql['tar'].append(f'R.channel_code IN {channel}')
+            if len(date) == 1:
+                sql['act'].append(f"DA.activation_date >= '{date[0]}'")
+                sql['tar'].append(f"""
+                    MONTH(RT.target_date) >= MONTH('{date[0]}')
+                """)
+            elif len(date) == 2:
+                sql['act'].append(f"""(
+                    DA.activation_date BETWEEN '{date[0]}' AND '{date[1]}'
+                )""")
+                sql['tar'].append(f"""
+                    MONTH(RT.target_date) BETWEEN MONTH('{date[0]}') AND
+                    MONTH('{date[1]}')
+                """)
+
         case _:
             st.error(f'Tidak ada tabel dengan nama {table}')
             st.stop()
