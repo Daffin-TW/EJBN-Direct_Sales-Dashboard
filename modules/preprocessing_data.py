@@ -2,6 +2,7 @@ from streamlit import session_state as ss
 from .database import fetch_data
 import streamlit as st
 import pandas as pd
+import numpy as np
 
 
 def tenure_extraction(data: str):
@@ -38,6 +39,7 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
 
     df = df[df['dealer_id'].isin(['DS03', 'DS04', 'DS05'])]
     df = df[df['rcm'] != 'Indra Irawati'].reset_index(drop=True)
+    df['nik_sales'] = df['nik_sales'].replace('-', np.nan)
     df.dropna(subset=['nik_sales'], inplace=True)
 
     df['activation_date'] = pd.to_datetime(
@@ -48,8 +50,6 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
             df['guaranteed revenue (mio)'] * 1000000
         ).astype(int)
     df['product'] = df['package_rev'].apply(product_extraction)
-
-    print(df)
 
     agent = fetch_data('Agent').reset_index()
     agent.sort_values('Employment Date', inplace=True)
