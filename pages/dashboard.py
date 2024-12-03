@@ -95,6 +95,18 @@ def d4_first_row(data: tuple[pd.DataFrame]):
     with col2.container(border=True):
         vis.Agent.revenue_areachart(data[0])
 
+def d4_second_row(data: pd.DataFrame):
+    col1, col2, col3 = st.columns(3)
+
+    with col1.container(border=True):
+        vis.Agent.growth_barchart(data)
+    
+    with col2.container(border=True):
+        vis.Agent.ordertype_heatmap(data)
+
+    with col3.container(border=True):
+        vis.Agent.product_barchart(data)
+
 
 initialization()
 
@@ -166,6 +178,7 @@ match ss.dashboard_selection:
             ss.data_is_empty = False
 
             d4_first_row((activation_data, target_data))
+            d4_second_row(activation_data)
 
         else:
             ss.data_is_empty = True

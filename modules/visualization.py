@@ -131,10 +131,10 @@ class General:
         fig.update_yaxes(
             categoryorder='total ascending', title=TITLE_FONT_COLOR,
             range=[index_range - 10.5, index_range],
-            minallowed=0, maxallowed=index_range
+            minallowed=-0.5, maxallowed=index_range
         )
         fig.update_xaxes(minallowed=0, title=TITLE_FONT_COLOR)
-        fig.update_traces(insidetextanchor='middle')
+        fig.update_traces(insidetextanchor='middle', textangle=0)
 
         st.write(fig)
 
@@ -438,7 +438,8 @@ class RceComparison:
                 'Tipe Order': [
                     'Change Postpaid Plan', 'Migration', 'New Registration'
                 ]
-            }, hover_data={'Produk & Tenure': False}, hover_name='Produk & Tenure'
+            }, hover_data={'Produk & Tenure': False, 'RCE': False},
+            hover_name='Produk & Tenure'
         )
         fig.update_layout(barcornerradius='20%', dragmode='pan')
         fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
@@ -882,10 +883,16 @@ class Agent:
             index=['Tanggal'], columns='Tipe Order', values='Achieve'
         )
         df_act = df_act.asfreq('D').reset_index()
-        df_act = df_act.melt(
-            id_vars=['Tanggal'], value_vars=['GA', 'CPP'],
-            value_name='Achieve'
-        )
+        
+        try:
+            df_act = df_act.melt(
+                id_vars=['Tanggal'], value_vars=['GA', 'CPP'],
+                value_name='Achieve'
+            )
+        except:
+            st.error('Data tidak lengkap, mohon mencoba filter lain...')
+            st.stop()
+            
         df_act['Achieve'] = df_act['Achieve'].fillna(0)
         df_act['Bulan'] = df_act['Tanggal'].dt.month
         df_act['Jumlah Aktivasi'] = df_act.groupby(
@@ -995,39 +1002,190 @@ class Agent:
 
         st.write(main_fig)
 
-    # @st.cache_data(ttl=300, show_spinner=False)
+    @st.cache_data(ttl=300, show_spinner=False)
     def revenue_areachart(data: pd.DataFrame):
         df = data.copy()
 
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'guaranteed_revenue': 'Revenue',
+            'target_revenue': 'Target'
+        }
+
         df['activation_date'] = pd.to_datetime(df['activation_date'])
         df = df.groupby(
-                'activation_date'
+                ['activation_date']
             )['guaranteed_revenue'].sum().reset_index()
-        df.rename(columns={
-                'activation_date': 'Tanggal',
-                'guaranteed_revenue': 'Revenue'
-            }, inplace=True)
-        df = df.set_index('Tanggal').asfreq('D').reset_index()
+        df.rename(columns=columns_rename, inplace=True)
+        df['Bulan'] = df['Tanggal'].dt.month
+        df.set_index('Tanggal', inplace=True)
+        df = df.asfreq('D').reset_index()
+        df['Revenue'] = df.groupby(['Bulan'])['Revenue'].cumsum()
 
         minimum = df['Tanggal'].min()
         maximum = df['Tanggal'].max()
         line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
 
         fig = px.area(
-            df, x='Tanggal', y='Revenue', height=400,
-            color_discrete_sequence=['#CC2B52'],
-            hover_data={'Tanggal': False}
+            df, x='Tanggal', y='Revenue', 
+            height=500, color_discrete_sequence=['#7AB2D3'],
+            hover_data={
+                'Tanggal': False
+            }
+        )
+        fig.update_traces(
+            legendgrouptitle_text='Achieve',
+            legendgroup='achieve',
+            hovertemplate='Rp%{y:,.0f}'
         )
         fig.update_layout(
             yaxis_tickprefix='Rp',
             yaxis_tickformat=',.1d',
-            hovermode='x unified',
-            dragmode='pan'
+            hovermode='x unified', dragmode='pan'
         )
-
+        fig.update_legends(
+            orientation='h', yanchor='bottom', xanchor='left', y=1
+        )
         fig.update_xaxes(showline=True, title=TITLE_FONT_COLOR)
         fig.update_yaxes(minallowed=0, title=TITLE_FONT_COLOR)
+        for i in line:
+            fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
+        st.write(fig)
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def growth_barchart(data: pd.DataFrame):
+        df = data.copy()
+
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'order_type': 'Tipe Achieve',
+            'count': 'Achieve'
+        }
+        order_type_rename = {
+            'Change Postpaid Plan': 'CPP',
+            'Migration': 'GA',
+            'New Registration': 'GA',
+        }
+
+        df['order_type'] = df['order_type'].replace(order_type_rename)
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+        df_order = df.groupby(
+                pd.Grouper(key='activation_date', freq='ME')
+            )['order_type'].value_counts().reset_index()
+        df_rev = df.groupby(
+                pd.Grouper(key='activation_date', freq='ME')
+            )['guaranteed_revenue'].sum().reset_index()
+        df_rev['order_type'] = 'Revenue'
+        
+        df = df_order.copy()
+        for value in df_rev.values:
+            df.loc[len(df)] = value[[0, 2, 1]]
+
+        df['activation_date'] = df['activation_date'].map(
+            lambda dt: dt.replace(day=1)
+        )
+        df.rename(columns=columns_rename, inplace=True)
+        df.sort_values(['Tanggal', 'Tipe Achieve'], inplace=True)
+        df['Growth Rate (%)'] = df['Achieve'].pct_change(periods=3)
+        df['Growth Rate (%)'] = df['Growth Rate (%)'] * 100
+        df.dropna(inplace=True)
+        df.reset_index(inplace=True)
+
+        fig = px.bar(
+            df, x='Tanggal', y='Growth Rate (%)', barmode='group',
+            color='Tipe Achieve', height=500,
+            color_discrete_sequence=px.colors.qualitative.Set2
+        )
+        fig.update_traces(hovertemplate='%{y:.1f}% | %{x}')
+        fig.update_layout(
+            barcornerradius='20%',
+            dragmode='pan'
+        )
+        fig.update_xaxes(
+            dtick='M1', tickformat='%b %Y', title=TITLE_FONT_COLOR
+        )
+        fig.for_each_yaxis(lambda a: a.update(ticksuffix='%'))
+        fig.update_yaxes(title=TITLE_FONT_COLOR)
+        fig.add_hline(0, line_color='#3C3D37')
+
+        st.write(fig)
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def product_barchart(data: pd.DataFrame):
+        df = data.copy()
+
+        df['product_tenure'] = (df['product'] + ' - ' + df['tenure'].astype(str))
+        df = df.value_counts(subset=['product_tenure', 'order_type'])
+        df = df.reset_index()
+        index_range = len(df['product_tenure'].unique())
+
+        df.rename(columns={
+            'product_tenure': 'Produk & Tenure',
+            'count': 'Jumlah Aktivasi',
+            'order_type': 'Tipe Order'
+        }, inplace=True)
+
+        fig = px.bar(
+            df, x='Jumlah Aktivasi', y='Produk & Tenure',
+            color='Tipe Order', text_auto=True, height=500,
+            color_discrete_sequence=['#DBD3D3', '#FF7F3E', '#0D92F4'],
+            category_orders={
+                'Tipe Order': [
+                    'Change Postpaid Plan', 'Migration', 'New Registration'
+                ]
+            }, hover_data={'Produk & Tenure': False}, hover_name='Produk & Tenure'
+        )
+        fig.update_layout(barcornerradius='20%', dragmode='pan')
+        fig.update_legends(orientation='h', yanchor='bottom', xanchor='left', y=1)
+        fig.update_yaxes(
+            categoryorder='total ascending', title=TITLE_FONT_COLOR,
+            range=[index_range - 10.5, index_range],
+            minallowed=-0.5, maxallowed=index_range
+        )
+        fig.update_xaxes(minallowed=0, title=TITLE_FONT_COLOR)
+        fig.update_traces(insidetextanchor='middle', textangle=0)
+
+        st.write(fig)
+
+    @st.cache_data(ttl=300, show_spinner=False)
+    def ordertype_heatmap(data: pd.DataFrame):
+        df = data.copy()
+
+        columns_rename = {
+            'activation_date': 'Tanggal',
+            'target_date': 'Tanggal',
+            'order_type': 'Tipe Order',
+            'count': 'Jumlah Aktivasi'
+        }
+
+        df['activation_date'] = pd.to_datetime(df['activation_date'])
+        df = df.groupby(
+                pd.Grouper(key='activation_date', freq='D')
+            )['order_type'].value_counts().reset_index()
+        df.rename(columns=columns_rename, inplace=True)
+
+        minimum = df['Tanggal'].min()
+        maximum = df['Tanggal'].max()
+        line = [f'2024-{i+1}-1' for i in range(minimum.month, maximum.month)]
+
+        df = df.pivot(
+                index='Tipe Order', columns='Tanggal'
+            )['Jumlah Aktivasi'].fillna(0)
+        
+        fig = px.imshow(df, x=df.columns, y=df.index, height=500)
+        fig.update_traces(hovertemplate='Aktivasi : %{z} | %{x}')
+        fig.update_layout(
+            barcornerradius='20%',
+            dragmode='pan'
+        )
+        fig.update_xaxes(title=TITLE_FONT_COLOR)
+        fig.update_yaxes(
+            fixedrange=True, title=TITLE_FONT_COLOR,
+            tickangle=-90, showgrid=False
+        )
         for i in line:
             fig.add_vline(i, line_dash='dot', line_color='#3C3D37')
 
