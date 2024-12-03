@@ -691,9 +691,9 @@ class RceStatistics:
                 ['activation_date']
             )['guaranteed_revenue'].sum().reset_index()
         df_act.rename(columns=columns_rename, inplace=True)
-        df_act['Bulan'] = df_act['Tanggal'].dt.month
         df_act.set_index('Tanggal', inplace=True)
         df_act = df_act.asfreq('D').reset_index()
+        df_act['Bulan'] = df_act['Tanggal'].dt.month
         df_act['Revenue'] = df_act.groupby(['Bulan'])['Revenue'].cumsum()
 
         df_tar.rename(columns=columns_rename, inplace=True)
@@ -1018,10 +1018,12 @@ class Agent:
                 ['activation_date']
             )['guaranteed_revenue'].sum().reset_index()
         df.rename(columns=columns_rename, inplace=True)
-        df['Bulan'] = df['Tanggal'].dt.month
         df.set_index('Tanggal', inplace=True)
         df = df.asfreq('D').reset_index()
+        df['Bulan'] = df['Tanggal'].dt.month
+        df['Revenue'] = df['Revenue'].fillna(0)
         df['Revenue'] = df.groupby(['Bulan'])['Revenue'].cumsum()
+
 
         minimum = df['Tanggal'].min()
         maximum = df['Tanggal'].max()
