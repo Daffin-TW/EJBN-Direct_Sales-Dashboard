@@ -12,10 +12,14 @@ def tenure_extraction(data: str):
         return int(token[-1])
 
 def product_extraction(data: str):
-    token = data.rstrip('-2412369')
-    return token
+    token = data.split('-')
 
-@st.cache_data(ttl=60, show_spinner=False)
+    if token == 1:
+        return token
+    else:
+        return token[0].rstrip('GB ')
+
+# @st.cache_data(ttl=60, show_spinner=False)
 def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
     columns = {
         'activation_date', 'package_rev', 'order_type',
@@ -34,16 +38,19 @@ def preprocessing_daily_activation(data: pd.DataFrame) -> pd.DataFrame:
 
     df = df[df['dealer_id'].isin(['DS03', 'DS04', 'DS05'])]
     df = df[df['rcm'] != 'Indra Irawati'].reset_index(drop=True)
+    df.dropna(subset=['nik_sales'], inplace=True)
 
     df['activation_date'] = pd.to_datetime(
-        df['activation_date'], format='%Y%m%d'
-    ).dt.date
-    df['tenure'] = df['package_rev'].apply(tenure_extraction)
+            df['activation_date'], format='%Y%m%d'
+        ).dt.date
+    # df['tenure'] = df['package_rev'].apply(tenure_extraction)
     df['guaranteed revenue (mio)'] = (
-        df['guaranteed revenue (mio)'] * 1000000
-    ).astype(int)
+            df['guaranteed revenue (mio)'] * 1000000
+        ).astype(int)
     df['product'] = df['package_rev'].apply(product_extraction)
-    
+
+    print(df)
+
     agent = fetch_data('Agent').reset_index()
     agent.sort_values('Employment Date', inplace=True)
     agent.drop_duplicates(['ID', 'NIK'], keep='last', inplace=True)
